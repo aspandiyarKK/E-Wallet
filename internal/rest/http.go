@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"EWallet/repository"
+	"EWallet/pkg/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -19,7 +19,7 @@ type App interface {
 	CreateWallet(wallet repository.Wallet) error
 }
 
-func NewRouter(log *logrus.Logger) *Router {
+func NewRouter(log *logrus.Logger, app App) *Router {
 	r := &Router{
 		log:    log.WithField("component", "router"),
 		router: gin.Default(),
@@ -57,7 +57,7 @@ func (r *Router) deleteWallet(c *gin.Context) {
 	if err != nil {
 		r.log.Errorf("failed to delete wallet %w : ", err)
 	}
-	c.JSON(http.StatusOK, "ok")
+	c.JSON(http.StatusOK, nil)
 }
 
 func (r *Router) updateWallet(c *gin.Context) {
@@ -70,6 +70,6 @@ func (r *Router) updateWallet(c *gin.Context) {
 		r.log.Errorf("failed to update wallet: %v", err)
 	}
 
-	c.JSON(http.StatusOK, "ok")
+	c.JSON(http.StatusOK, nil)
 
 }
