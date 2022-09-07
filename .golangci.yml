@@ -1,0 +1,117 @@
+# На момент завершения работы над курсом версия линтера:
+# golangci-lint has version 1.44.2 built from d58dbde5 on 2022-02-17T20:58:06Z
+
+run:
+  go: '1.17'
+  skip-dirs-use-default: false
+  tests: true
+
+issues:
+  max-same-issues: 0
+
+  exclude:
+    - G107 # Potential HTTP request made with variable url
+    - G114
+    - G404 # Weak random number generator
+    - SA9003 # Empty branch
+
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - funlen
+        - lll
+
+linters-settings:
+  gosec:
+    excludes:
+      - G204
+
+  cyclop:
+    max-complexity: 20
+
+  gci:
+    sections:
+      - standard
+      - default
+
+  lll:
+    line-length: 210
+
+  nestif:
+    min-complexity: 7
+
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        json: snake
+
+  forbidigo:
+    forbid:
+      - .*\.Fatal.*
+
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - contextcheck
+#    - cyclop
+    - decorder
+    - depguard
+    - dogsled
+    - dupl
+    - durationcheck
+    - grouper
+    - errcheck
+    - errchkjson
+    - errname
+    - exhaustive
+    - exportloopref
+    - forbidigo
+#    - funlen
+#    - gci
+#    - gocognit
+    - goconst
+    - gocritic
+#    - gocyclo
+    - godot
+    - gofmt
+    - goheader
+    - goimports
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - importas
+    - ineffassign
+    - lll
+#    - maintidx
+    - makezero
+    - misspell
+#    - nestif
+    - nilerr
+#    - nilnil
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+#    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+#    - tagliatelle
+    - tenv
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unused
+    - wastedassign
+    - whitespace
