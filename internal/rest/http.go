@@ -84,7 +84,7 @@ func (r *Router) deleteWallet(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, nil)
 		return
 	}
-	c.JSON(http.StatusOK, nil)
+	c.JSON(http.StatusNoContent, nil)
 }
 
 func (r *Router) updateWallet(c *gin.Context) {

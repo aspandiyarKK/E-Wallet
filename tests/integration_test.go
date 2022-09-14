@@ -39,6 +39,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.url = "http://localhost:3001/api/v1"
 	time.Sleep(100 * time.Millisecond)
 }
+
 func (s *IntegrationTestSuite) TearDownSuite() {
 }
 
@@ -47,6 +48,7 @@ func (s *IntegrationTestSuite) SetupTest() {
 
 func (s *IntegrationTestSuite) TearDownTest() {
 }
+
 func (s *IntegrationTestSuite) TestCreateAndGetWallet() {
 	wallet := repository.Wallet{
 		Owner:   "test1",
@@ -149,10 +151,15 @@ func (s *IntegrationTestSuite) TestDeleteWallet() {
 	req, err = http.NewRequestWithContext(context.Background(), http.MethodDelete, path+"/"+strconv.Itoa(id), nil)
 	require.NoError(s.T(), err)
 	resp, err = http.DefaultClient.Do(req)
-	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), http.StatusNoContent, resp.StatusCode)
 	require.NoError(s.T(), err)
 
 }
+
+//func (s *IntegrationTestSuite) processRequest(ctx context.Context, method, path string, body interface{}) (*http.Response, error) {
+//	panic("implement me")
+//}
+
 func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
 }
