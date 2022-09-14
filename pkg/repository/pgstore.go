@@ -51,7 +51,7 @@ func (pg *PG) CreateWallet(ctx context.Context, wallet Wallet) (int, error) {
 	var id int
 	row := pg.db.QueryRowContext(ctx, query, wallet.Owner, wallet.Balance, time.Now())
 	if err := row.Scan(&id); err != nil {
-		return 0, fmt.Errorf("err inserting last_visit: %w", err)
+		return 0, fmt.Errorf("err creating wallet: %w", err)
 	}
 	return id, nil
 }
