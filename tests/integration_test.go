@@ -50,35 +50,21 @@ func (s *IntegrationTestSuite) TearDownTest() {
 }
 
 func (s *IntegrationTestSuite) TestCreateAndGetWallet() {
+	ctx := context.Background()
 	wallet := repository.Wallet{
 		Owner:   "test1",
 		Balance: 1050,
 	}
-	requestBody, err := json.Marshal(wallet)
-	require.NoError(s.T(), err)
 	path := s.url + "/wallet"
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, path, bytes.NewBuffer(requestBody))
-	require.NoError(s.T(), err)
-
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
-
 	var idMap map[string]int
-	err = json.NewDecoder(resp.Body).Decode(&idMap)
-	require.NoError(s.T(), err)
-
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	id, ok := idMap["id"]
 	require.True(s.T(), ok)
-	req, err = http.NewRequestWithContext(context.Background(), http.MethodGet, path+"/"+strconv.Itoa(id), nil)
-	require.NoError(s.T(), err)
-	resp, err = http.DefaultClient.Do(req)
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+
 	var walletResp repository.Wallet
-	err = json.NewDecoder(resp.Body).Decode(&walletResp)
-	require.NoError(s.T(), err)
+	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(id), nil, &walletResp)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), wallet.Owner, walletResp.Owner)
 	require.Equal(s.T(), wallet.Balance, walletResp.Balance)
 }
@@ -156,9 +142,21 @@ func (s *IntegrationTestSuite) TestDeleteWallet() {
 
 }
 
-//func (s *IntegrationTestSuite) processRequest(ctx context.Context, method, path string, body interface{}) (*http.Response, error) {
-//	panic("implement me")
-//}
+func (s *IntegrationTestSuite) processRequest(ctx context.Context, method, path string, body interface{}, response interface{}) *http.Response {
+	s.T().Helper()
+	requestBody, err := json.Marshal(body)
+	require.NoError(s.T(), err)
+	req, err := http.NewRequestWithContext(ctx, method, path, bytes.NewBuffer(requestBody))
+	require.NoError(s.T(), err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(s.T(), err)
+	if response != nil {
+		err = json.NewDecoder(resp.Body).Decode(response)
+		require.NoError(s.T(), err)
+	}
+	return resp
+}
 
 func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
