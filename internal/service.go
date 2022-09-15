@@ -29,7 +29,7 @@ func NewApp(log *logrus.Logger, store Storage) *App {
 func (s *App) CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error) {
 	id, err := s.store.CreateWallet(ctx, wallet)
 	if err != nil {
-		fmt.Errorf("err inserting last_visit: %w", err)
+		return 0, fmt.Errorf("err inserting last_visit: %w", err)
 	}
 	return id, nil
 }
@@ -37,7 +37,7 @@ func (s *App) CreateWallet(ctx context.Context, wallet repository.Wallet) (int, 
 func (s *App) GetWallet(ctx context.Context, id int) (repository.Wallet, error) {
 	wal, err := s.store.GetWallet(ctx, id)
 	if err != nil {
-		fmt.Errorf("err getting wallet : %w", err)
+		return repository.Wallet{}, fmt.Errorf("err getting wallet : %w", err)
 	}
 	return wal, nil
 }

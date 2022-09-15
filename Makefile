@@ -3,3 +3,6 @@ up:
 
 down:
 	docker-compose down
+
+test:
+	go test -v ./...

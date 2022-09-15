@@ -39,6 +39,10 @@ func NewRepo(ctx context.Context, log *logrus.Logger, dsn string) (*PG, error) {
 	return pg, nil
 }
 
+func (pg *PG) Migrate() {
+
+}
+
 func (pg *PG) Close() {
 	if err := pg.db.Close(); err != nil {
 		pg.log.Errorf("err closing pg connection: %v", err)

@@ -2,6 +2,9 @@ package main
 
 import (
 	"EWallet/internal"
+	"EWallet/internal/rest"
+	"EWallet/pkg/logger"
+	"EWallet/pkg/repository"
 	"context"
 	"errors"
 	"fmt"
@@ -10,10 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	"EWallet/internal/rest"
-	"EWallet/pkg/logger"
-	"EWallet/pkg/repository"
 )
 
 const port = 3000
@@ -32,7 +31,6 @@ func main() {
 		log.Panicf("Failed to connect to database: %v", err)
 	}
 	app := internal.NewApp(log, pg)
-
 	r := rest.NewRouter(log, app)
 	if err = r.Run(ctx, addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Panicf("Error starting server: %v", err)
