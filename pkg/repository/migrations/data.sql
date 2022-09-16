@@ -1,3 +1,6 @@
+-- noinspection SqlNoDataSourceInspectionForFile
+
+-- +migrate Up
 CREATE TABLE IF NOT EXISTS wallet
 (
     id         bigserial PRIMARY KEY,
@@ -17,3 +20,6 @@ CREATE TABLE IF NOT EXISTS transaction
     to_account_id   int            NOT NULL
 
 );
+-- +migrate Down
+DROP TABLE wallet CASCADE;
+DROP TABLE transaction CASCADE;

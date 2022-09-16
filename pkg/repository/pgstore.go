@@ -2,12 +2,19 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"embed"
+	_ "embed"
 	"fmt"
+	migrate "github.com/rubenv/sql-migrate"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 )
+
+//go:embed migrations
+var migrations embed.FS
 
 type Wallet struct {
 	Owner     string    `json:"owner" db:"owner"`
@@ -39,8 +46,37 @@ func NewRepo(ctx context.Context, log *logrus.Logger, dsn string) (*PG, error) {
 	return pg, nil
 }
 
-func (pg *PG) Migrate() {
+func (pg *PG) Migrate() error {
+	conn, err := sql.Open("pgx", pg.dsn)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err = conn.Close(); err != nil {
+			pg.log.Error("err closing migration connection")
+		}
+	}()
+	assetDir := func() func(string) ([]string, error) {
+		return func(path string) ([]string, error) {
+			dirEntry, er := migrations.ReadDir(path)
+			if er != nil {
+				return nil, er
+			}
+			entries := make([]string, 0)
+			for _, e := range dirEntry {
+				entries = append(entries, e.Name())
+			}
 
+			return entries, nil
+		}
+	}()
+	asset := migrate.AssetMigrationSource{
+		Asset:    migrations.ReadFile,
+		AssetDir: assetDir,
+		Dir:      "migrations",
+	}
+	_, err = migrate.Exec(conn, "postgres", asset, migrate.Up)
+	return err
 }
 
 func (pg *PG) Close() {

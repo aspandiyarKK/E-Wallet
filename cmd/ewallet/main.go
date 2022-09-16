@@ -30,6 +30,11 @@ func main() {
 	if err != nil {
 		log.Panicf("Failed to connect to database: %v", err)
 	}
+
+	if err = pg.Migrate(); err != nil {
+		log.Panicf("err migrating pg: %v", err)
+	}
+
 	app := internal.NewApp(log, pg)
 	r := rest.NewRouter(log, app)
 	if err = r.Run(ctx, addr); err != nil && !errors.Is(err, http.ErrServerClosed) {

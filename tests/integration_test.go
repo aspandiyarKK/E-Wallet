@@ -32,6 +32,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	var err error
 	s.store, err = repository.NewRepo(ctx, s.log, pgDSN)
 	require.NoError(s.T(), err)
+	err = s.store.Migrate()
+	require.NoError(s.T(), err)
 	s.router = rest.NewRouter(s.log, s.store)
 	go func() {
 		_ = s.router.Run(ctx, "localhost:3001")
@@ -67,6 +69,7 @@ func (s *IntegrationTestSuite) TestCreateAndGetWallet() {
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), wallet.Owner, walletResp.Owner)
 	require.Equal(s.T(), wallet.Balance, walletResp.Balance)
+	s.processRequest(ctx, http.MethodDelete, path+"/"+strconv.Itoa(id), nil, nil)
 }
 
 func (s *IntegrationTestSuite) TestUpdateWallet() {
@@ -78,68 +81,41 @@ func (s *IntegrationTestSuite) TestUpdateWallet() {
 		Owner:   "test2",
 		Balance: 1000,
 	}
-	requestBody, err := json.Marshal(wallet)
-	require.NoError(s.T(), err)
+	ctx := context.Background()
 	path := s.url + "/wallet"
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, path, bytes.NewBuffer(requestBody))
-	require.NoError(s.T(), err)
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
-
 	var idMap map[string]int
-	err = json.NewDecoder(resp.Body).Decode(&idMap)
-	require.NoError(s.T(), err)
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	id, ok := idMap["id"]
 	require.True(s.T(), ok)
 
-	requestBody, err = json.Marshal(wallet2)
-	req, err = http.NewRequestWithContext(context.Background(), http.MethodPut, path+"/"+strconv.Itoa(id), bytes.NewBuffer(requestBody))
-
-	require.NoError(s.T(), err)
-	resp, err = http.DefaultClient.Do(req)
-
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
-
 	var walletResp repository.Wallet
-	err = json.NewDecoder(resp.Body).Decode(&walletResp)
-	require.NoError(s.T(), err)
-
+	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id), wallet2, &walletResp)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), walletResp.Owner, wallet2.Owner)
 	require.Equal(s.T(), walletResp.Balance, wallet2.Balance)
+
+	s.processRequest(ctx, http.MethodDelete, path+"/"+strconv.Itoa(id), nil, nil)
 
 }
 
 func (s *IntegrationTestSuite) TestDeleteWallet() {
+	ctx := context.Background()
 	wallet := repository.Wallet{
 		Owner:   "test1",
 		Balance: 100,
 	}
 
-	requestBody, err := json.Marshal(wallet)
-	require.NoError(s.T(), err)
 	path := s.url + "/wallet"
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, path, bytes.NewBuffer(requestBody))
-	require.NoError(s.T(), err)
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
-
 	var idMap map[string]int
-	err = json.NewDecoder(resp.Body).Decode(&idMap)
-	require.NoError(s.T(), err)
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	id, ok := idMap["id"]
 	require.True(s.T(), ok)
 
-	req, err = http.NewRequestWithContext(context.Background(), http.MethodDelete, path+"/"+strconv.Itoa(id), nil)
-	require.NoError(s.T(), err)
-	resp, err = http.DefaultClient.Do(req)
-	require.Equal(s.T(), http.StatusNoContent, resp.StatusCode)
-	require.NoError(s.T(), err)
+	resp = s.processRequest(ctx, http.MethodDelete, path+"/"+strconv.Itoa(id), nil, nil)
 
+	require.Equal(s.T(), http.StatusNoContent, resp.StatusCode)
 }
 
 func (s *IntegrationTestSuite) processRequest(ctx context.Context, method, path string, body interface{}, response interface{}) *http.Response {
