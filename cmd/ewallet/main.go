@@ -1,19 +1,21 @@
 package main
 
 import (
-	"EWallet/internal"
-	"EWallet/internal/rest"
-	"EWallet/pkg/logger"
-	"EWallet/pkg/repository"
 	"context"
 	"errors"
 	"fmt"
-	_ "github.com/jackc/pgx/v4/stdlib"
-	migrate "github.com/rubenv/sql-migrate"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"EWallet/internal"
+	"EWallet/internal/rest"
+	"EWallet/pkg/logger"
+	"EWallet/pkg/repository"
+
+	_ "github.com/jackc/pgx/v4/stdlib"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
 const port = 3000

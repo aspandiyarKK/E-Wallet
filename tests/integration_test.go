@@ -1,21 +1,24 @@
+//nolint:bodyclose
 package tests
 
 import (
-	"EWallet/internal"
-	"EWallet/internal/rest"
-	"EWallet/pkg/repository"
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"strconv"
+	"testing"
+	"time"
+
+	"EWallet/internal"
+	"EWallet/internal/rest"
+	"EWallet/pkg/repository"
+
 	_ "github.com/jackc/pgx/v4/stdlib"
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"net/http"
-	"strconv"
-	"testing"
-	"time"
 )
 
 const pgDSN = "postgres://postgres:secret@localhost:5433/postgres"
@@ -129,6 +132,9 @@ func (s *IntegrationTestSuite) processRequest(ctx context.Context, method, path 
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(s.T(), err)
+	defer func() {
+		require.NoError(s.T(), resp.Body.Close())
+	}()
 	if response != nil {
 		err = json.NewDecoder(resp.Body).Decode(response)
 		require.NoError(s.T(), err)

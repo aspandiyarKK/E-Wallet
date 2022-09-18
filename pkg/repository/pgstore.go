@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"embed"
-	_ "embed"
 	"fmt"
-	migrate "github.com/rubenv/sql-migrate"
 	"time"
+
+	migrate "github.com/rubenv/sql-migrate"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
@@ -83,7 +83,6 @@ func (pg *PG) Close() {
 	if err := pg.db.Close(); err != nil {
 		pg.log.Errorf("err closing pg connection: %v", err)
 	}
-	return
 }
 
 func (pg *PG) CreateWallet(ctx context.Context, wallet Wallet) (int, error) {

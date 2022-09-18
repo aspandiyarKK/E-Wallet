@@ -1,9 +1,11 @@
 package internal
 
 import (
-	"EWallet/pkg/repository"
 	"context"
 	"fmt"
+
+	"EWallet/pkg/repository"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,8 +56,6 @@ func (s *App) UpdateWallet(ctx context.Context, id int, wallet repository.Wallet
 	wal, err := s.store.UpdateWallet(ctx, id, wallet)
 	if err != nil {
 		return repository.Wallet{}, fmt.Errorf("err updating the Wallet: %w", err)
-
 	}
 	return wal, nil
-
 }
