@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	migrate "github.com/rubenv/sql-migrate"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,7 +32,7 @@ func main() {
 		log.Panicf("Failed to connect to database: %v", err)
 	}
 
-	if err = pg.Migrate(); err != nil {
+	if err = pg.Migrate(migrate.Up); err != nil {
 		log.Panicf("err migrating pg: %v", err)
 	}
 

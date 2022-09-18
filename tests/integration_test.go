@@ -1,12 +1,14 @@
 package tests
 
 import (
+	"EWallet/internal"
 	"EWallet/internal/rest"
 	"EWallet/pkg/repository"
 	"bytes"
 	"context"
 	"encoding/json"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	migrate "github.com/rubenv/sql-migrate"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -23,6 +25,7 @@ type IntegrationTestSuite struct {
 	log    *logrus.Logger
 	store  *repository.PG
 	router *rest.Router
+	app    *internal.App
 	url    string
 }
 
@@ -32,9 +35,10 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	var err error
 	s.store, err = repository.NewRepo(ctx, s.log, pgDSN)
 	require.NoError(s.T(), err)
-	err = s.store.Migrate()
+	err = s.store.Migrate(migrate.Up)
 	require.NoError(s.T(), err)
-	s.router = rest.NewRouter(s.log, s.store)
+	s.app = internal.NewApp(s.log, s.store)
+	s.router = rest.NewRouter(s.log, s.app)
 	go func() {
 		_ = s.router.Run(ctx, "localhost:3001")
 	}()
@@ -43,6 +47,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
+	err := s.store.Migrate(migrate.Down)
+	require.NoError(s.T(), err)
 }
 
 func (s *IntegrationTestSuite) SetupTest() {
@@ -69,7 +75,6 @@ func (s *IntegrationTestSuite) TestCreateAndGetWallet() {
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), wallet.Owner, walletResp.Owner)
 	require.Equal(s.T(), wallet.Balance, walletResp.Balance)
-	s.processRequest(ctx, http.MethodDelete, path+"/"+strconv.Itoa(id), nil, nil)
 }
 
 func (s *IntegrationTestSuite) TestUpdateWallet() {
@@ -94,9 +99,6 @@ func (s *IntegrationTestSuite) TestUpdateWallet() {
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), walletResp.Owner, wallet2.Owner)
 	require.Equal(s.T(), walletResp.Balance, wallet2.Balance)
-
-	s.processRequest(ctx, http.MethodDelete, path+"/"+strconv.Itoa(id), nil, nil)
-
 }
 
 func (s *IntegrationTestSuite) TestDeleteWallet() {

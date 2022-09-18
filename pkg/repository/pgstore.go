@@ -46,7 +46,7 @@ func NewRepo(ctx context.Context, log *logrus.Logger, dsn string) (*PG, error) {
 	return pg, nil
 }
 
-func (pg *PG) Migrate() error {
+func (pg *PG) Migrate(direction migrate.MigrationDirection) error {
 	conn, err := sql.Open("pgx", pg.dsn)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (pg *PG) Migrate() error {
 		AssetDir: assetDir,
 		Dir:      "migrations",
 	}
-	_, err = migrate.Exec(conn, "postgres", asset, migrate.Up)
+	_, err = migrate.Exec(conn, "postgres", asset, direction)
 	return err
 }
 
