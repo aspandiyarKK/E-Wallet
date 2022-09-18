@@ -22,7 +22,12 @@ type Wallet struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
-
+type Finrequest struct {
+	ID           int     `json:"id"`
+	Sum          float64 `json:"sum"`
+	WalletSource int     `json:"walletSource"`
+	WalletTarget int     `json:"walletTarget"`
+}
 type PG struct {
 	log *logrus.Entry
 	db  *sqlx.DB
@@ -93,6 +98,7 @@ func (pg *PG) CreateWallet(ctx context.Context, wallet Wallet) (int, error) {
 		return 0, fmt.Errorf("err creating wallet: %w", err)
 	}
 	return id, nil
+
 }
 
 func (pg *PG) GetWallet(ctx context.Context, id int) (Wallet, error) {
@@ -119,6 +125,28 @@ func (pg *PG) DeleteWallet(ctx context.Context, id int) error {
 	_, err := pg.db.ExecContext(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("err deleting wallet : %w", err)
+	}
+	return nil
+}
+
+func (pg *PG) Deposit(ctx context.Context, request *Finrequest) error {
+	query := `UPDATE wallet SET balance = balance + $1 WHERE id = $2 RETURNING balance`
+	_, err := pg.db.ExecContext(ctx, query, request.Sum, request.ID)
+	if err != nil {
+		return fmt.Errorf("err depositing the Wallet: %w", err)
+	}
+	return nil
+}
+func (pg *PG) Withdrawal(ctx context.Context, request *Finrequest) error {
+	wallet, err := pg.GetWallet(ctx, request.ID)
+	if wallet.Balance < request.Sum {
+		return fmt.Errorf("err not enough money: %w", err)
+	}
+	query := `UPDATE wallet SET balance = balance - $1 WHERE id = $2 RETURNING balance`
+	_, err = pg.db.ExecContext(ctx, query, request.Sum, request.ID)
+
+	if err != nil {
+		return fmt.Errorf("err withdrawaling the Wallet: %w", err)
 	}
 	return nil
 }

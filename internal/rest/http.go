@@ -22,6 +22,8 @@ type App interface {
 	UpdateWallet(ctx context.Context, id int, wallet repository.Wallet) (repository.Wallet, error)
 	DeleteWallet(ctx context.Context, id int) error
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
+	Deposit(ctx context.Context, request *repository.Finrequest) error
+	Withdrawal(ctx context.Context, request *repository.Finrequest) error
 }
 
 func NewRouter(log *logrus.Logger, app App) *Router {
@@ -35,6 +37,8 @@ func NewRouter(log *logrus.Logger, app App) *Router {
 	g.POST("/wallet", r.addWallet)
 	g.DELETE("/wallet/:id", r.deleteWallet)
 	g.PUT("/wallet/:id", r.updateWallet)
+	g.POST("/wallet/depo", r.deposit)
+	g.POST("/wallet/drawal", r.withdrawal)
 	return r
 }
 
@@ -107,4 +111,33 @@ func (r *Router) updateWallet(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, wallet)
+}
+func (r *Router) deposit(c *gin.Context) {
+	var input repository.Finrequest
+	err := c.BindJSON(&input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	if err := r.app.Deposit(c, &input); err != nil {
+		r.log.Errorf("failed to deposit wallet: %v", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.JSON(http.StatusOK, "Success depositing")
+}
+
+func (r *Router) withdrawal(c *gin.Context) {
+	var input repository.Finrequest
+	err := c.BindJSON(&input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	if err = r.app.Withdrawal(c, &input); err != nil {
+		r.log.Errorf("failed to drawl wallet: %v", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.JSON(http.StatusOK, "Success drawaling")
 }

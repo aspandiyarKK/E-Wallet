@@ -14,6 +14,8 @@ type Storage interface {
 	UpdateWallet(ctx context.Context, id int, wallet repository.Wallet) (repository.Wallet, error)
 	DeleteWallet(ctx context.Context, id int) error
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
+	Deposit(ctx context.Context, request *repository.Finrequest) error
+	Withdrawal(ctx context.Context, request *repository.Finrequest) error
 }
 
 type App struct {
@@ -59,3 +61,33 @@ func (s *App) UpdateWallet(ctx context.Context, id int, wallet repository.Wallet
 	}
 	return wal, nil
 }
+func (s *App) Deposit(ctx context.Context, request *repository.Finrequest) error {
+	err := s.store.Deposit(ctx, request)
+	if err != nil {
+		return fmt.Errorf("err depositing the Wallet: %w", err)
+	}
+	return nil
+}
+func (s *App) Withdrawal(ctx context.Context, request *repository.Finrequest) error {
+	wal, err := s.store.GetWallet(ctx, request.ID)
+	if wal.Balance < request.Sum {
+		return fmt.Errorf("err not enough money")
+	}
+	err = s.store.Withdrawal(ctx, request)
+	if err != nil {
+		return fmt.Errorf("err withdrawaling the Wallet: %w", err)
+	}
+	return nil
+}
+
+//func (s *App) Transfer(ctx context.Context, fromId, toId int, sum float64) error {
+//	_, err := s.store.WithDrawal(ctx, fromId, sum)
+//	if err != nil {
+//		return fmt.Errorf("err on sender: %v", err)
+//	}
+//	_, err = s.store.Deposit(ctx, toId, sum)
+//	if err != nil {
+//		return fmt.Errorf("err on sending money")
+//	}
+//	return nil
+//}
