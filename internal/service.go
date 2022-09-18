@@ -16,6 +16,7 @@ type Storage interface {
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
 	Deposit(ctx context.Context, request *repository.Finrequest) error
 	Withdrawal(ctx context.Context, request *repository.Finrequest) error
+	Transfer(ctx context.Context, request *repository.Finrequest) error
 }
 
 type App struct {
@@ -80,14 +81,10 @@ func (s *App) Withdrawal(ctx context.Context, request *repository.Finrequest) er
 	return nil
 }
 
-//func (s *App) Transfer(ctx context.Context, fromId, toId int, sum float64) error {
-//	_, err := s.store.WithDrawal(ctx, fromId, sum)
-//	if err != nil {
-//		return fmt.Errorf("err on sender: %v", err)
-//	}
-//	_, err = s.store.Deposit(ctx, toId, sum)
-//	if err != nil {
-//		return fmt.Errorf("err on sending money")
-//	}
-//	return nil
-//}
+func (s *App) Transfer(ctx context.Context, request *repository.Finrequest) error {
+	err := s.store.Transfer(ctx, request)
+	if err != nil {
+		return fmt.Errorf("err transfering the wallet: %w", err)
+	}
+	return nil
+}

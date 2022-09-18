@@ -24,6 +24,7 @@ type App interface {
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
 	Deposit(ctx context.Context, request *repository.Finrequest) error
 	Withdrawal(ctx context.Context, request *repository.Finrequest) error
+	Transfer(ctx context.Context, request *repository.Finrequest) error
 }
 
 func NewRouter(log *logrus.Logger, app App) *Router {
@@ -37,8 +38,9 @@ func NewRouter(log *logrus.Logger, app App) *Router {
 	g.POST("/wallet", r.addWallet)
 	g.DELETE("/wallet/:id", r.deleteWallet)
 	g.PUT("/wallet/:id", r.updateWallet)
-	g.POST("/wallet/depo", r.deposit)
-	g.POST("/wallet/drawal", r.withdrawal)
+	g.PUT("/wallet/depo", r.deposit)
+	g.PUT("/wallet/drawal", r.withdrawal)
+	g.PUT("/wallet/transfer", r.transfer)
 	return r
 }
 
@@ -140,4 +142,18 @@ func (r *Router) withdrawal(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, "Success drawaling")
+}
+func (r *Router) transfer(c *gin.Context) {
+	var input repository.Finrequest
+	err := c.BindJSON(&input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	if err = r.app.Transfer(c, &input); err != nil {
+		r.log.Errorf("failed to transfer money: %v", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.JSON(http.StatusOK, "Success transferting")
 }

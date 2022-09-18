@@ -130,7 +130,7 @@ func (pg *PG) DeleteWallet(ctx context.Context, id int) error {
 }
 
 func (pg *PG) Deposit(ctx context.Context, request *Finrequest) error {
-	query := `UPDATE wallet SET balance = balance + $1 WHERE id = $2 RETURNING balance`
+	query := `UPDATE wallet SET balance = balance + $1 WHERE id = $2`
 	_, err := pg.db.ExecContext(ctx, query, request.Sum, request.ID)
 	if err != nil {
 		return fmt.Errorf("err depositing the Wallet: %w", err)
@@ -142,11 +142,31 @@ func (pg *PG) Withdrawal(ctx context.Context, request *Finrequest) error {
 	if wallet.Balance < request.Sum {
 		return fmt.Errorf("err not enough money: %w", err)
 	}
-	query := `UPDATE wallet SET balance = balance - $1 WHERE id = $2 RETURNING balance`
+	query := `UPDATE wallet SET balance = balance - $1 WHERE id = $2`
 	_, err = pg.db.ExecContext(ctx, query, request.Sum, request.ID)
 
 	if err != nil {
 		return fmt.Errorf("err withdrawaling the Wallet: %w", err)
+	}
+	return nil
+}
+
+func (pg *PG) Transfer(ctx context.Context, request *Finrequest) error {
+	tx, err := pg.db.BeginTx(ctx, nil)
+	defer tx.Rollback()
+	if err != nil {
+		return fmt.Errorf("err trasnfering the wallet: %w", err)
+	}
+	query := `UPDATE wallet SET balance = balance - $1 WHERE id = $2 RETURNING balance`
+	if _, err = tx.ExecContext(ctx, query, request.Sum, request.WalletSource); err != nil {
+		return fmt.Errorf("err withdrawaling the Wallet: %w", err)
+	}
+	query = `UPDATE wallet SET balance = balance + $1 WHERE id = $2 RETURNING balance`
+	if _, err = tx.ExecContext(ctx, query, request.Sum, request.WalletTarget); err != nil {
+		return fmt.Errorf("err depositing the Wallet: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("err trasnfering the wallet: %w", err)
 	}
 	return nil
 }
