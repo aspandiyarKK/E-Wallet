@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -9,6 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Router struct {
@@ -22,9 +25,9 @@ type App interface {
 	UpdateWallet(ctx context.Context, id int, wallet repository.Wallet) (repository.Wallet, error)
 	DeleteWallet(ctx context.Context, id int) error
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
-	Deposit(ctx context.Context, request *repository.Finrequest) error
-	Withdrawal(ctx context.Context, request *repository.Finrequest) error
-	Transfer(ctx context.Context, request *repository.Finrequest) error
+	Deposit(ctx context.Context, id int, request *repository.FinRequest) error
+	Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error
+	Transfer(ctx context.Context, id int, request *repository.FinRequest) error
 }
 
 func NewRouter(log *logrus.Logger, app App) *Router {
@@ -33,15 +36,23 @@ func NewRouter(log *logrus.Logger, app App) *Router {
 		router: gin.Default(),
 		app:    app,
 	}
+	r.router.GET("/metrics", prometheusHandler())
 	g := r.router.Group("/api/v1")
 	g.GET("/wallet/:id", r.getWallet)
 	g.POST("/wallet", r.addWallet)
 	g.DELETE("/wallet/:id", r.deleteWallet)
 	g.PUT("/wallet/:id", r.updateWallet)
-	g.PUT("/wallet/depo", r.deposit)
-	g.PUT("/wallet/drawal", r.withdrawal)
-	g.PUT("/wallet/transfer", r.transfer)
+	g.PUT("/wallet/:id/deposit", r.deposit)
+	g.PUT("/wallet/:id/withdraw", r.withdrawal)
+	g.PUT("/wallet/:id/transfer", r.transfer)
 	return r
+}
+
+func prometheusHandler() gin.HandlerFunc {
+	h := promhttp.Handler()
+	return func(c *gin.Context) {
+		h.ServeHTTP(c.Writer, c.Request)
+	}
 }
 
 func (r *Router) Run(_ context.Context, addr string) error {
@@ -114,45 +125,71 @@ func (r *Router) updateWallet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, wallet)
 }
+
 func (r *Router) deposit(c *gin.Context) {
-	var input repository.Finrequest
-	err := c.BindJSON(&input)
+	val := c.Param("id")
+	id, err := strconv.Atoi(val)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
-	if err := r.app.Deposit(c, &input); err != nil {
+	var input repository.FinRequest
+	err = c.BindJSON(&input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	if err = r.app.Deposit(c, id, &input); err != nil {
 		r.log.Errorf("failed to deposit wallet: %v", err)
 		c.JSON(http.StatusInternalServerError, nil)
 		return
 	}
-	c.JSON(http.StatusOK, "Success depositing")
+	c.JSON(http.StatusOK, "Ok")
 }
 
 func (r *Router) withdrawal(c *gin.Context) {
-	var input repository.Finrequest
-	err := c.BindJSON(&input)
+	val := c.Param("id")
+	id, err := strconv.Atoi(val)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
-	if err = r.app.Withdrawal(c, &input); err != nil {
-		r.log.Errorf("failed to drawl wallet: %v", err)
-		c.JSON(http.StatusInternalServerError, nil)
+	var input repository.FinRequest
+	err = c.BindJSON(&input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
-	c.JSON(http.StatusOK, "Success drawaling")
+	err = r.app.Withdrawal(c, id, &input)
+	switch {
+	case err == nil:
+	case errors.Is(err, repository.ErrInsufficientFunds):
+		c.JSON(http.StatusBadRequest, err)
+		return
+	default:
+		r.log.Errorf("failed to withdraw from wallet: %v", err)
+		c.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, "Ok")
 }
+
 func (r *Router) transfer(c *gin.Context) {
-	var input repository.Finrequest
-	err := c.BindJSON(&input)
+	val := c.Param("id")
+	id, err := strconv.Atoi(val)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
-	if err = r.app.Transfer(c, &input); err != nil {
+	var input repository.FinRequest
+	err = c.BindJSON(&input)
+	if err != nil || input.Sum <= 0 {
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
+	if err = r.app.Transfer(c, id, &input); err != nil {
 		r.log.Errorf("failed to transfer money: %v", err)
-		c.JSON(http.StatusInternalServerError, nil)
+		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
 	c.JSON(http.StatusOK, "Success transferting")

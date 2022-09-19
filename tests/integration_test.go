@@ -80,6 +80,10 @@ func (s *IntegrationTestSuite) TestCreateAndGetWallet() {
 	require.Equal(s.T(), wallet.Balance, walletResp.Balance)
 }
 
+func (s *IntegrationTestSuite) GetWalletNotFound() {
+	s.T().Fail()
+}
+
 func (s *IntegrationTestSuite) TestUpdateWallet() {
 	wallet := repository.Wallet{
 		Owner:   "test1",

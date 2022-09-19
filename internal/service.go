@@ -14,9 +14,10 @@ type Storage interface {
 	UpdateWallet(ctx context.Context, id int, wallet repository.Wallet) (repository.Wallet, error)
 	DeleteWallet(ctx context.Context, id int) error
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
-	Deposit(ctx context.Context, request *repository.Finrequest) error
-	Withdrawal(ctx context.Context, request *repository.Finrequest) error
-	Transfer(ctx context.Context, request *repository.Finrequest) error
+	Deposit(ctx context.Context, id int, request *repository.FinRequest) error
+	Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error
+	Transfer(ctx context.Context, id int, request *repository.FinRequest) error
+	CheckBalance(ctx context.Context, id int) (float64, error)
 }
 
 type App struct {
@@ -62,27 +63,22 @@ func (s *App) UpdateWallet(ctx context.Context, id int, wallet repository.Wallet
 	}
 	return wal, nil
 }
-func (s *App) Deposit(ctx context.Context, request *repository.Finrequest) error {
-	err := s.store.Deposit(ctx, request)
+func (s *App) Deposit(ctx context.Context, id int, request *repository.FinRequest) error {
+	err := s.store.Deposit(ctx, id, request)
 	if err != nil {
 		return fmt.Errorf("err depositing the Wallet: %w", err)
 	}
 	return nil
 }
-func (s *App) Withdrawal(ctx context.Context, request *repository.Finrequest) error {
-	wal, err := s.store.GetWallet(ctx, request.ID)
-	if wal.Balance < request.Sum {
-		return fmt.Errorf("err not enough money")
-	}
-	err = s.store.Withdrawal(ctx, request)
-	if err != nil {
-		return fmt.Errorf("err withdrawaling the Wallet: %w", err)
+func (s *App) Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error {
+	if err := s.store.Withdrawal(ctx, id, request); err != nil {
+		return fmt.Errorf("err withdrawing from the wallet: %w", err)
 	}
 	return nil
 }
 
-func (s *App) Transfer(ctx context.Context, request *repository.Finrequest) error {
-	err := s.store.Transfer(ctx, request)
+func (s *App) Transfer(ctx context.Context, id int, request *repository.FinRequest) error {
+	err := s.store.Transfer(ctx, id, request)
 	if err != nil {
 		return fmt.Errorf("err transfering the wallet: %w", err)
 	}
