@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"EWallet/pkg/repository"
@@ -51,6 +52,9 @@ func (s *App) GetWallet(ctx context.Context, id int) (repository.Wallet, error) 
 func (s *App) DeleteWallet(ctx context.Context, id int) error {
 	err := s.store.DeleteWallet(ctx, id)
 	if err != nil {
+		if errors.Is(err, repository.ErrWalletNotFound) {
+			return repository.ErrWalletNotFound
+		}
 		return fmt.Errorf("err deleting wallet : %w", err)
 	}
 	return nil
@@ -63,6 +67,7 @@ func (s *App) UpdateWallet(ctx context.Context, id int, wallet repository.Wallet
 	}
 	return wal, nil
 }
+
 func (s *App) Deposit(ctx context.Context, id int, request *repository.FinRequest) error {
 	err := s.store.Deposit(ctx, id, request)
 	if err != nil {
@@ -70,6 +75,7 @@ func (s *App) Deposit(ctx context.Context, id int, request *repository.FinReques
 	}
 	return nil
 }
+
 func (s *App) Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error {
 	if err := s.store.Withdrawal(ctx, id, request); err != nil {
 		return fmt.Errorf("err withdrawing from the wallet: %w", err)
@@ -80,7 +86,7 @@ func (s *App) Withdrawal(ctx context.Context, id int, request *repository.FinReq
 func (s *App) Transfer(ctx context.Context, id int, request *repository.FinRequest) error {
 	err := s.store.Transfer(ctx, id, request)
 	if err != nil {
-		return fmt.Errorf("err transfering the wallet: %w", err)
+		return fmt.Errorf("err transferring the wallet: %w", err)
 	}
 	return nil
 }

@@ -1,13 +1,14 @@
 package repository
 
 import (
-	"EWallet/pkg/metrics"
 	"context"
 	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
 	"time"
+
+	"EWallet/pkg/metrics"
 
 	migrate "github.com/rubenv/sql-migrate"
 
@@ -34,7 +35,11 @@ type PG struct {
 	dsn string
 }
 
-var ErrInsufficientFunds = fmt.Errorf("err insuficient funds")
+var (
+	ErrInsufficientFunds    = fmt.Errorf("err insuficient funds")
+	ErrWalletNotFound       = fmt.Errorf("err wallet not found")
+	ErrWalletTargetNotFound = fmt.Errorf("err wallet target  not found")
+)
 
 func NewRepo(ctx context.Context, log *logrus.Logger, dsn string) (*PG, error) {
 	db, err := sqlx.ConnectContext(ctx, "pgx", dsn)
@@ -105,7 +110,6 @@ func (pg *PG) CreateWallet(ctx context.Context, wallet Wallet) (int, error) {
 		return 0, fmt.Errorf("err creating wallet: %w", err)
 	}
 	return id, nil
-
 }
 
 func (pg *PG) GetWallet(ctx context.Context, id int) (Wallet, error) {
@@ -117,6 +121,9 @@ func (pg *PG) GetWallet(ctx context.Context, id int) (Wallet, error) {
 	var wallet Wallet
 	if err := pg.db.GetContext(ctx, &wallet, query, id); err != nil {
 		metrics.MetricErrCount.WithLabelValues("GetWallet").Inc()
+		if errors.Is(err, sql.ErrNoRows) {
+			return Wallet{}, ErrWalletNotFound
+		}
 		return Wallet{}, fmt.Errorf("err getting wallet : %w", err)
 	}
 	return wallet, nil
@@ -132,6 +139,9 @@ func (pg *PG) UpdateWallet(ctx context.Context, id int, wallet Wallet) (Wallet, 
 	err := row.StructScan(&wallet)
 	if err != nil {
 		metrics.MetricErrCount.WithLabelValues("UpdateWallet").Inc()
+		if errors.Is(err, sql.ErrNoRows) {
+			return Wallet{}, ErrWalletNotFound
+		}
 		return Wallet{}, fmt.Errorf("err updating the Wallet: %w", err)
 	}
 	return wallet, nil
@@ -143,7 +153,11 @@ func (pg *PG) DeleteWallet(ctx context.Context, id int) error {
 		metrics.MetricDBRequestsDuration.WithLabelValues("DeleteWallet").Observe(time.Since(started).Seconds())
 	}()
 	query := `DELETE FROM wallet WHERE id = $1`
-	_, err := pg.db.ExecContext(ctx, query, id)
+	res, err := pg.db.ExecContext(ctx, query, id)
+	cnt, _ := res.RowsAffected()
+	if cnt == 0 {
+		return ErrWalletNotFound
+	}
 	if err != nil {
 		metrics.MetricErrCount.WithLabelValues("DeleteWallet").Inc()
 		return fmt.Errorf("err deleting wallet : %w", err)
@@ -157,13 +171,18 @@ func (pg *PG) Deposit(ctx context.Context, id int, request *FinRequest) error {
 		metrics.MetricDBRequestsDuration.WithLabelValues("Deposit").Observe(time.Since(started).Seconds())
 	}()
 	query := `UPDATE wallet SET balance = balance + $1 WHERE id = $2`
-	_, err := pg.db.ExecContext(ctx, query, request.Sum, id)
+	res, err := pg.db.ExecContext(ctx, query, request.Sum, id)
+	cnt, _ := res.RowsAffected()
+	if cnt == 0 {
+		return ErrWalletNotFound
+	}
 	if err != nil {
 		metrics.MetricErrCount.WithLabelValues("Deposit").Inc()
 		return fmt.Errorf("err depositing the Wallet: %w", err)
 	}
 	return nil
 }
+
 func (pg *PG) Withdrawal(ctx context.Context, id int, request *FinRequest) error {
 	started := time.Now()
 	defer func() {
@@ -183,8 +202,12 @@ func (pg *PG) Withdrawal(ctx context.Context, id int, request *FinRequest) error
 	if err = pg.checkBalance(ctx, tx, id, request.Sum); err != nil {
 		return err
 	}
-	query := `UPDATE wallet SET balance = balance - $1 WHERE id = $2`
-	_, err = pg.db.ExecContext(ctx, query, request.Sum, id)
+	query := `UPDATE wallet SET balance = balance - $1 WHERE id = $2 `
+	res, err := tx.ExecContext(ctx, query, request.Sum, id)
+	cnt, _ := res.RowsAffected()
+	if cnt == 0 {
+		return ErrWalletNotFound
+	}
 	if err != nil {
 		metrics.MetricErrCount.WithLabelValues("Withdrawal").Inc()
 		return fmt.Errorf("err withdrawing the Wallet: %w", err)
@@ -192,7 +215,7 @@ func (pg *PG) Withdrawal(ctx context.Context, id int, request *FinRequest) error
 	err = tx.Commit()
 	if err != nil {
 		metrics.MetricErrCount.WithLabelValues("Withdrawal").Inc()
-		return fmt.Errorf("err commiting the transaction: %w", err)
+		return fmt.Errorf("err committing the transaction: %w", err)
 	}
 	return nil
 }
@@ -217,12 +240,20 @@ func (pg *PG) Transfer(ctx context.Context, id int, request *FinRequest) error {
 		return err
 	}
 	query := `UPDATE wallet SET balance = balance - $1 WHERE id = $2 RETURNING balance`
-	if _, err = tx.ExecContext(ctx, query, request.Sum, id); err != nil {
+	if res, err := tx.ExecContext(ctx, query, request.Sum, id); err != nil {
 		metrics.MetricErrCount.WithLabelValues("Transfer").Inc()
+		cnt, _ := res.RowsAffected()
+		if cnt == 0 {
+			return ErrWalletNotFound
+		}
 		return fmt.Errorf("err withdrawaling the Wallet: %w", err)
 	}
 	query = `UPDATE wallet SET balance = balance + $1 WHERE id = $2 RETURNING balance`
-	if _, err = tx.ExecContext(ctx, query, request.Sum, request.WalletTarget); err != nil {
+	if res, err := tx.ExecContext(ctx, query, request.Sum, request.WalletTarget); err != nil {
+		cnt, _ := res.RowsAffected()
+		if cnt == 0 {
+			return ErrWalletTargetNotFound
+		}
 		metrics.MetricErrCount.WithLabelValues("Transfer").Inc()
 		return fmt.Errorf("err depositing the Wallet: %w", err)
 	}
@@ -247,6 +278,9 @@ func (pg *PG) checkBalance(ctx context.Context, querier querier, id int, sum flo
 	row := querier.QueryRowContext(ctx, query, id)
 	if err := row.Scan(&balance); err != nil {
 		metrics.MetricErrCount.WithLabelValues("checkBalance").Inc()
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrWalletNotFound
+		}
 		return fmt.Errorf("err checking balance: %w", err)
 	}
 	if balance < sum {
@@ -265,6 +299,9 @@ func (pg *PG) CheckBalance(ctx context.Context, id int) (float64, error) {
 	row := pg.db.QueryRowContext(ctx, query, id)
 	if err := row.Scan(&balance); err != nil {
 		metrics.MetricErrCount.WithLabelValues("CheckBalance").Inc()
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, ErrWalletNotFound
+		}
 		return 0, fmt.Errorf("err checking balance: %w", err)
 	}
 	return balance, nil

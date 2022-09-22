@@ -69,7 +69,7 @@ func (s *IntegrationTestSuite) TestCreateAndGetWallet() {
 	path := s.url + "/wallet"
 	var idMap map[string]int
 	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
-	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
 	id, ok := idMap["id"]
 	require.True(s.T(), ok)
 
@@ -80,8 +80,22 @@ func (s *IntegrationTestSuite) TestCreateAndGetWallet() {
 	require.Equal(s.T(), wallet.Balance, walletResp.Balance)
 }
 
-func (s *IntegrationTestSuite) GetWalletNotFound() {
-	s.T().Fail()
+func (s *IntegrationTestSuite) TestGetWalletNotFound() {
+	ctx := context.Background()
+	wallet := repository.Wallet{
+		Owner:   "test1",
+		Balance: 1050,
+	}
+	path := s.url + "/wallet"
+	var idMap map[string]int
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
+	id, ok := idMap["id"]
+	require.True(s.T(), ok)
+
+	var walletResp repository.Wallet
+	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(id+1), nil, &walletResp)
+	require.Equal(s.T(), http.StatusNotFound, resp.StatusCode)
 }
 
 func (s *IntegrationTestSuite) TestUpdateWallet() {
@@ -97,7 +111,7 @@ func (s *IntegrationTestSuite) TestUpdateWallet() {
 	path := s.url + "/wallet"
 	var idMap map[string]int
 	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
-	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
 	id, ok := idMap["id"]
 	require.True(s.T(), ok)
 
@@ -118,7 +132,7 @@ func (s *IntegrationTestSuite) TestDeleteWallet() {
 	path := s.url + "/wallet"
 	var idMap map[string]int
 	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
-	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
 	id, ok := idMap["id"]
 	require.True(s.T(), ok)
 
@@ -144,6 +158,95 @@ func (s *IntegrationTestSuite) processRequest(ctx context.Context, method, path 
 		require.NoError(s.T(), err)
 	}
 	return resp
+}
+
+func (s *IntegrationTestSuite) TestDepoWallet() {
+	ctx := context.Background()
+	path := s.url + "/wallet"
+	wallet := repository.Wallet{
+		Owner:   "test1",
+		Balance: 1000,
+	}
+
+	finreq := repository.FinRequest{
+		Sum: 1000.0,
+	}
+	var idMap map[string]int
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
+	id, ok := idMap["id"]
+	require.True(s.T(), ok)
+	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id)+"/deposit", finreq, nil)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	var walletResp repository.Wallet
+	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(id), nil, &walletResp)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), walletResp.Balance, 2000.0)
+}
+
+func (s *IntegrationTestSuite) TestWithDrawWallet() {
+	ctx := context.Background()
+	path := s.url + "/wallet"
+	wallet := repository.Wallet{
+		Owner:   "test1",
+		Balance: 2000,
+	}
+
+	finreq := repository.FinRequest{
+		Sum: 1000.0,
+	}
+	var idMap map[string]int
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
+	id, ok := idMap["id"]
+	require.True(s.T(), ok)
+	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id)+"/withdraw", finreq, nil)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	var walletResp repository.Wallet
+	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(id), nil, &walletResp)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), walletResp.Balance, 1000.0)
+}
+
+func (s *IntegrationTestSuite) TestTransferWallet() {
+	ctx := context.Background()
+	path := s.url + "/wallet"
+	wallet := repository.Wallet{
+		Owner:   "test1",
+		Balance: 1000,
+	}
+	wallet2 := repository.Wallet{
+		Owner:   "test1",
+		Balance: 1000,
+	}
+	var idMap map[string]int
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
+
+	idSender, ok := idMap["id"]
+	require.True(s.T(), ok)
+
+	resp = s.processRequest(ctx, http.MethodPost, path, wallet2, &idMap)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
+
+	idGetter, ok := idMap["id"]
+	require.True(s.T(), ok)
+	finreq := repository.FinRequest{
+		Sum:          600.0,
+		WalletTarget: idGetter,
+	}
+	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(idSender)+"/transfer", finreq, nil)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+
+	var walletRespSender repository.Wallet
+	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(idSender), nil, &walletRespSender)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), walletRespSender.Balance, 400.0)
+
+	var walletRespGetter repository.Wallet
+	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(idGetter), nil, &walletRespGetter)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), walletRespGetter.Balance, 1600.0)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {

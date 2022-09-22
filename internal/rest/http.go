@@ -62,29 +62,34 @@ func (r *Router) Run(_ context.Context, addr string) error {
 func (r *Router) addWallet(c *gin.Context) {
 	var input repository.Wallet
 	if err := c.BindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 	id, err := r.app.CreateWallet(c, input)
 	if err != nil {
 		r.log.Errorf("failed to store date: %v", err)
-		c.JSON(http.StatusInternalServerError, nil)
+		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"id": id})
+	c.JSON(http.StatusCreated, gin.H{"id": id})
 }
 
 func (r *Router) getWallet(c *gin.Context) {
 	val := c.Param("id")
 	id, err := strconv.Atoi(val)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 	w, err := r.app.GetWallet(c, id)
-	if err != nil {
+	switch {
+	case err == nil:
+	case errors.Is(err, repository.ErrWalletNotFound):
+		c.JSON(http.StatusNotFound, err)
+		return
+	default:
 		r.log.Errorf("failed to get Wallet: %v", err)
-		c.JSON(http.StatusInternalServerError, nil)
+		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
 	c.JSON(http.StatusOK, w)
@@ -94,13 +99,18 @@ func (r *Router) deleteWallet(c *gin.Context) {
 	val := c.Param("id")
 	id, err := strconv.Atoi(val)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 	err = r.app.DeleteWallet(c, id)
-	if err != nil {
+	switch {
+	case err == nil:
+	case errors.Is(err, repository.ErrWalletNotFound):
+		c.JSON(http.StatusNotFound, err)
+		return
+	default:
 		r.log.Errorf("failed to delete wallet %v: ", err)
-		c.JSON(http.StatusInternalServerError, nil)
+		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)
@@ -110,17 +120,17 @@ func (r *Router) updateWallet(c *gin.Context) {
 	val := c.Param("id")
 	id, err := strconv.Atoi(val)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 	var wallet repository.Wallet
 	if err = c.BindJSON(&wallet); err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 	if wallet, err = r.app.UpdateWallet(c, id, wallet); err != nil {
 		r.log.Errorf("failed to update wallet: %v", err)
-		c.JSON(http.StatusInternalServerError, nil)
+		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
 	c.JSON(http.StatusOK, wallet)
@@ -130,18 +140,24 @@ func (r *Router) deposit(c *gin.Context) {
 	val := c.Param("id")
 	id, err := strconv.Atoi(val)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 	var input repository.FinRequest
 	err = c.BindJSON(&input)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
-	if err = r.app.Deposit(c, id, &input); err != nil {
+	err = r.app.Deposit(c, id, &input)
+	switch {
+	case err == nil:
+	case errors.Is(err, repository.ErrWalletNotFound):
+		c.JSON(http.StatusNotFound, err)
+		return
+	default:
 		r.log.Errorf("failed to deposit wallet: %v", err)
-		c.JSON(http.StatusInternalServerError, nil)
+		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
 	c.JSON(http.StatusOK, "Ok")
@@ -151,13 +167,13 @@ func (r *Router) withdrawal(c *gin.Context) {
 	val := c.Param("id")
 	id, err := strconv.Atoi(val)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 	var input repository.FinRequest
 	err = c.BindJSON(&input)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 	err = r.app.Withdrawal(c, id, &input)
@@ -165,6 +181,9 @@ func (r *Router) withdrawal(c *gin.Context) {
 	case err == nil:
 	case errors.Is(err, repository.ErrInsufficientFunds):
 		c.JSON(http.StatusBadRequest, err)
+		return
+	case errors.Is(err, repository.ErrWalletNotFound):
+		c.JSON(http.StatusNotFound, repository.ErrWalletNotFound)
 		return
 	default:
 		r.log.Errorf("failed to withdraw from wallet: %v", err)
@@ -188,9 +207,19 @@ func (r *Router) transfer(c *gin.Context) {
 		return
 	}
 	if err = r.app.Transfer(c, id, &input); err != nil {
-		r.log.Errorf("failed to transfer money: %v", err)
-		c.JSON(http.StatusInternalServerError, err)
-		return
+		switch {
+		case err == nil:
+		case errors.Is(err, repository.ErrInsufficientFunds):
+			c.JSON(http.StatusBadRequest, err)
+			return
+		case errors.Is(err, repository.ErrWalletNotFound):
+			c.JSON(http.StatusNotFound, repository.ErrWalletNotFound)
+			return
+		default:
+			r.log.Errorf("failed to transfer money: %v", err)
+			c.JSON(http.StatusInternalServerError, err)
+			return
+		}
 	}
-	c.JSON(http.StatusOK, "Success transferting")
+	c.JSON(http.StatusOK, "Success transferring")
 }
