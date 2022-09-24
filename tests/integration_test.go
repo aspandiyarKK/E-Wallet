@@ -25,11 +25,12 @@ const pgDSN = "postgres://postgres:secret@localhost:5433/postgres"
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	log    *logrus.Logger
-	store  *repository.PG
-	router *rest.Router
-	app    *internal.App
-	url    string
+	log      *logrus.Logger
+	store    *repository.PG
+	router   *rest.Router
+	app      *internal.App
+	exchange *internal.ExchangeRate
+	url      string
 }
 
 func (s *IntegrationTestSuite) SetupSuite() {
@@ -40,7 +41,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	require.NoError(s.T(), err)
 	err = s.store.Migrate(migrate.Up)
 	require.NoError(s.T(), err)
-	s.app = internal.NewApp(s.log, s.store)
+	s.exchange = internal.NewExchange(s.log)
+	s.app = internal.NewApp(s.log, s.store, s.exchange)
 	s.router = rest.NewRouter(s.log, s.app)
 	go func() {
 		_ = s.router.Run(ctx, "localhost:3001")

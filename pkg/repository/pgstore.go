@@ -112,7 +112,7 @@ func (pg *PG) CreateWallet(ctx context.Context, wallet Wallet) (int, error) {
 	return id, nil
 }
 
-func (pg *PG) GetWallet(ctx context.Context, id int) (Wallet, error) {
+func (pg *PG) GetWallet(ctx context.Context, id int, currency string) (Wallet, error) {
 	started := time.Now()
 	defer func() {
 		metrics.MetricDBRequestsDuration.WithLabelValues("GetWallet").Observe(time.Since(started).Seconds())

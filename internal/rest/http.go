@@ -21,7 +21,7 @@ type Router struct {
 }
 
 type App interface {
-	GetWallet(ctx context.Context, id int) (repository.Wallet, error)
+	GetWallet(ctx context.Context, id int, currency string) (repository.Wallet, error)
 	UpdateWallet(ctx context.Context, id int, wallet repository.Wallet) (repository.Wallet, error)
 	DeleteWallet(ctx context.Context, id int) error
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
@@ -76,12 +76,13 @@ func (r *Router) addWallet(c *gin.Context) {
 
 func (r *Router) getWallet(c *gin.Context) {
 	val := c.Param("id")
+	currency := c.Query("currency")
 	id, err := strconv.Atoi(val)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
-	w, err := r.app.GetWallet(c, id)
+	w, err := r.app.GetWallet(c, id, currency)
 	switch {
 	case err == nil:
 	case errors.Is(err, repository.ErrWalletNotFound):

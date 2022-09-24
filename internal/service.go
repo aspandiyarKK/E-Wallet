@@ -11,25 +11,29 @@ import (
 )
 
 type Storage interface {
-	GetWallet(ctx context.Context, id int) (repository.Wallet, error)
+	GetWallet(ctx context.Context, id int, currency string) (repository.Wallet, error)
 	UpdateWallet(ctx context.Context, id int, wallet repository.Wallet) (repository.Wallet, error)
 	DeleteWallet(ctx context.Context, id int) error
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
 	Deposit(ctx context.Context, id int, request *repository.FinRequest) error
 	Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error
 	Transfer(ctx context.Context, id int, request *repository.FinRequest) error
-	CheckBalance(ctx context.Context, id int) (float64, error)
+}
+type Exchange interface {
+	GetRate(ctx context.Context, currency string, amount float64) (float64, error)
 }
 
 type App struct {
-	log   *logrus.Entry
-	store Storage
+	log      *logrus.Entry
+	store    Storage
+	exchange Exchange
 }
 
-func NewApp(log *logrus.Logger, store Storage) *App {
+func NewApp(log *logrus.Logger, store Storage, exchange Exchange) *App {
 	return &App{
-		log:   log.WithField("component", "service"),
-		store: store,
+		log:      log.WithField("component", "service"),
+		store:    store,
+		exchange: exchange,
 	}
 }
 
@@ -41,10 +45,16 @@ func (s *App) CreateWallet(ctx context.Context, wallet repository.Wallet) (int, 
 	return id, nil
 }
 
-func (s *App) GetWallet(ctx context.Context, id int) (repository.Wallet, error) {
-	wal, err := s.store.GetWallet(ctx, id)
+func (s *App) GetWallet(ctx context.Context, id int, currency string) (repository.Wallet, error) {
+	wal, err := s.store.GetWallet(ctx, id, currency)
 	if err != nil {
 		return repository.Wallet{}, fmt.Errorf("err getting wallet : %w", err)
+	}
+	if currency != "" {
+		wal.Balance, err = s.exchange.GetRate(ctx, currency, wal.Balance)
+		if err != nil {
+			return repository.Wallet{}, fmt.Errorf("err converting currency : %w", err)
+		}
 	}
 	return wal, nil
 }

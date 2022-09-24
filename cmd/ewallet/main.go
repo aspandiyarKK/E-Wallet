@@ -37,8 +37,8 @@ func main() {
 	if err = pg.Migrate(migrate.Up); err != nil {
 		log.Panicf("err migrating pg: %v", err)
 	}
-
-	app := internal.NewApp(log, pg)
+	exch := internal.NewExchange(log)
+	app := internal.NewApp(log, pg, exch)
 	r := rest.NewRouter(log, app)
 	if err = r.Run(ctx, addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Panicf("Error starting server: %v", err)
