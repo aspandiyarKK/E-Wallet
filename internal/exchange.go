@@ -28,7 +28,7 @@ type Resp struct {
 	Result float64 `json:"result"`
 }
 
-func NewExchange(log *logrus.Logger) *ExchangeRate {
+func NewExchangeRate(log *logrus.Logger) *ExchangeRate {
 	return &ExchangeRate{
 		log: log.WithField("component", "exchange"),
 	}
