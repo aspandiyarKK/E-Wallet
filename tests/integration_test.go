@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"EWallet/pkg/exchange"
-
 	"EWallet/internal"
 	"EWallet/internal/rest"
 	"EWallet/pkg/repository"
@@ -23,17 +21,22 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const pgDSN = "postgres://postgres:secret@localhost:5433/postgres"
-const xrHost = "https://api.apilayer.com/exchangerates_data/convert?to="
+const (
+	pgDSN = "postgres://postgres:secret@localhost:5433/postgres"
+)
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	log      *logrus.Logger
-	store    *repository.PG
-	router   *rest.Router
-	app      *internal.App
-	exchange *exchange.Rate
-	url      string
+	log    *logrus.Logger
+	store  *repository.PG
+	router *rest.Router
+	app    *internal.App
+	url    string
+}
+type MockExchange struct{}
+
+func (m *MockExchange) GetRate(ctx context.Context, currency string, amount float64) (float64, error) {
+	return 1, nil
 }
 
 func (s *IntegrationTestSuite) SetupSuite() {
@@ -44,8 +47,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	require.NoError(s.T(), err)
 	err = s.store.Migrate(migrate.Up)
 	require.NoError(s.T(), err)
-	s.exchange = exchange.NewExchangeRate(s.log, xrHost)
-	s.app = internal.NewApp(s.log, s.store, s.exchange)
+	s.app = internal.NewApp(s.log, s.store, &MockExchange{})
 	s.router = rest.NewRouter(s.log, s.app)
 	go func() {
 		_ = s.router.Run(ctx, "localhost:3001")

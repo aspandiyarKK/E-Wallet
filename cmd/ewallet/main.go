@@ -26,7 +26,7 @@ var (
 	pgDSN  = os.Getenv("PG_DSN")
 	addr   = fmt.Sprintf("localhost:%d", port)
 	xrHost = os.Getenv("xrHost")
-	ApiKey = os.Getenv("apiKey")
+	apiKey = os.Getenv("apiKey")
 )
 
 func main() {
@@ -41,7 +41,7 @@ func main() {
 	if err = pg.Migrate(migrate.Up); err != nil {
 		log.Panicf("err migrating pg: %v", err)
 	}
-	exch := exchange.NewExchangeRate(log, xrHost)
+	exch := exchange.NewExchangeRate(log, xrHost, apiKey)
 	app := internal.NewApp(log, pg, exch)
 	r := rest.NewRouter(log, app)
 	if err = r.Run(ctx, addr); err != nil && !errors.Is(err, http.ErrServerClosed) {

@@ -6,16 +6,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 
 	"github.com/sirupsen/logrus"
 )
 
-var apiKey = os.Getenv("apiKey")
-
 type Rate struct {
 	log    *logrus.Entry
 	xrHost string
+	apiKey string
 }
 type Resp struct {
 	Success bool `json:"success"`
@@ -32,10 +30,11 @@ type Resp struct {
 	Result float64 `json:"result"`
 }
 
-func NewExchangeRate(log *logrus.Logger, xrHost string) *Rate {
+func NewExchangeRate(log *logrus.Logger, xrHost string, apiKey string) *Rate {
 	return &Rate{
 		log:    log.WithField("component", "exchange"),
 		xrHost: xrHost,
+		apiKey: apiKey,
 	}
 }
 
@@ -45,7 +44,7 @@ func (e *Rate) GetRate(ctx context.Context, currency string, amount float64) (fl
 	fmt.Println(url)
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	req.Header.Set("apikey", apiKey)
+	req.Header.Set("apikey", e.apiKey)
 
 	if err != nil {
 		fmt.Println(err)
