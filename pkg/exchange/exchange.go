@@ -1,4 +1,4 @@
-package internal
+package exchange
 
 import (
 	"context"
@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/sirupsen/logrus"
 )
 
-type ExchangeRate struct {
-	log *logrus.Entry
+var apiKey = os.Getenv("apiKey")
+
+type Rate struct {
+	log    *logrus.Entry
+	xrHost string
 }
 type Resp struct {
 	Success bool `json:"success"`
@@ -28,19 +32,20 @@ type Resp struct {
 	Result float64 `json:"result"`
 }
 
-func NewExchangeRate(log *logrus.Logger) *ExchangeRate {
-	return &ExchangeRate{
-		log: log.WithField("component", "exchange"),
+func NewExchangeRate(log *logrus.Logger, xrHost string) *Rate {
+	return &Rate{
+		log:    log.WithField("component", "exchange"),
+		xrHost: xrHost,
 	}
 }
 
-func (e *ExchangeRate) GetRate(ctx context.Context, currency string, amount float64) (float64, error) {
+func (e *Rate) GetRate(ctx context.Context, currency string, amount float64) (float64, error) {
 	amountStr := fmt.Sprintf("%v", amount)
-	url := "https://api.apilayer.com/exchangerates_data/convert?to=" + currency + "&from=rub&amount=" + amountStr
+	url := e.xrHost + currency + "&from=rub&amount=" + amountStr
 	fmt.Println(url)
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	req.Header.Set("apikey", "fcMPeBqh49hXoGziH4US5YqMbEA4njMi")
+	req.Header.Set("apikey", apiKey)
 
 	if err != nil {
 		fmt.Println(err)

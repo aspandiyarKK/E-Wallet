@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"EWallet/pkg/exchange"
+
 	"EWallet/internal"
 	"EWallet/internal/rest"
 	"EWallet/pkg/repository"
@@ -22,6 +24,7 @@ import (
 )
 
 const pgDSN = "postgres://postgres:secret@localhost:5433/postgres"
+const xrHost = "https://api.apilayer.com/exchangerates_data/convert?to="
 
 type IntegrationTestSuite struct {
 	suite.Suite
@@ -29,7 +32,7 @@ type IntegrationTestSuite struct {
 	store    *repository.PG
 	router   *rest.Router
 	app      *internal.App
-	exchange *internal.ExchangeRate
+	exchange *exchange.Rate
 	url      string
 }
 
@@ -41,7 +44,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	require.NoError(s.T(), err)
 	err = s.store.Migrate(migrate.Up)
 	require.NoError(s.T(), err)
-	s.exchange = internal.NewExchange(s.log)
+	s.exchange = exchange.NewExchangeRate(s.log, xrHost)
 	s.app = internal.NewApp(s.log, s.store, s.exchange)
 	s.router = rest.NewRouter(s.log, s.app)
 	go func() {

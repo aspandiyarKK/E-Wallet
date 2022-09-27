@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"EWallet/pkg/exchange"
+
 	"EWallet/internal"
 	"EWallet/internal/rest"
 	"EWallet/pkg/logger"
@@ -21,8 +23,10 @@ import (
 const port = 3000
 
 var (
-	pgDSN = os.Getenv("PG_DSN")
-	addr  = fmt.Sprintf("localhost:%d", port)
+	pgDSN  = os.Getenv("PG_DSN")
+	addr   = fmt.Sprintf("localhost:%d", port)
+	xrHost = os.Getenv("xrHost")
+	ApiKey = os.Getenv("apiKey")
 )
 
 func main() {
@@ -37,7 +41,7 @@ func main() {
 	if err = pg.Migrate(migrate.Up); err != nil {
 		log.Panicf("err migrating pg: %v", err)
 	}
-	exch := internal.NewExchangeRate(log)
+	exch := exchange.NewExchangeRate(log, xrHost)
 	app := internal.NewApp(log, pg, exch)
 	r := rest.NewRouter(log, app)
 	if err = r.Run(ctx, addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
