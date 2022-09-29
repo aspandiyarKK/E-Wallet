@@ -37,7 +37,8 @@ func NewRouter(log *logrus.Logger, app App) *Router {
 		app:    app,
 	}
 	r.router.GET("/metrics", prometheusHandler())
-	g := r.router.Group("/api/v1")
+
+	g := r.router.Group("/api/v1").Use(jwtAuth())
 	g.GET("/wallet/:id", r.getWallet)
 	g.POST("/wallet", r.addWallet)
 	g.DELETE("/wallet/:id", r.deleteWallet)
