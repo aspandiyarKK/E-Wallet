@@ -12,3 +12,4 @@ down:
 
 test:
 	go test -v ./...
+	make down

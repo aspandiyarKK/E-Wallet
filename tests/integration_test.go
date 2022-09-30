@@ -155,6 +155,7 @@ func (s *IntegrationTestSuite) processRequest(ctx context.Context, method, path 
 	req, err := http.NewRequestWithContext(ctx, method, path, bytes.NewBuffer(requestBody))
 	require.NoError(s.T(), err)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjY0NTI3NzcxLCJpc3MiOiJlLXdhbGxldCJ9.QEOtANjt0P_8t-5NjT24sW0ZfZslQhdIricextSM-t4")
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(s.T(), err)
 	defer func() {

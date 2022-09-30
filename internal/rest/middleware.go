@@ -10,13 +10,26 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-const TokenExpireDuration = time.Hour
+const TokenExpireDuration = time.Hour * 1000
 
 var secret = []byte("Goal:Senior in 2 years")
 
 type MyClaims struct {
 	Username string `json:"username"`
 	jwt.StandardClaims
+}
+
+func GenToken(username string) (string, error) {
+	c := MyClaims{
+		username,
+		jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(TokenExpireDuration).Unix(),
+			Issuer:    "e-wallet",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
+	return token.SignedString(secret)
 }
 
 func ParseToken(tokenString string) (*MyClaims, error) {
@@ -37,16 +50,19 @@ func jwtAuth() func(c *gin.Context) {
 		authHeader := c.Request.Header.Get("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, "Unauthorized")
+			c.Abort()
 			return
 		}
 		parts := strings.Split(authHeader, " ")
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
 			c.JSON(http.StatusUnauthorized, "Unauthorized")
+			c.Abort()
 			return
 		}
 		id, err := ParseToken(parts[1])
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, "Unauthorized")
+			c.JSON(http.StatusUnauthorized, err)
+			c.Abort()
 			return
 		}
 		c.Set("id", id)
