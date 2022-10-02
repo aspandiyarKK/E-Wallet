@@ -132,7 +132,13 @@ func (r *Router) updateWallet(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
-	if wallet, err = r.app.UpdateWallet(c, id, wallet); err != nil {
+	wallet, err = r.app.UpdateWallet(c, id, wallet)
+	switch {
+	case err == nil:
+	case errors.Is(err, repository.ErrWalletNotFound):
+		c.JSON(http.StatusNotFound, err)
+		return
+	default:
 		r.log.Errorf("failed to update wallet: %v", err)
 		c.JSON(http.StatusInternalServerError, err)
 		return

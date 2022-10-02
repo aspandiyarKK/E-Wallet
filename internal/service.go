@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"EWallet/pkg/repository"
@@ -62,9 +61,6 @@ func (s *App) GetWallet(ctx context.Context, id int, currency string) (repositor
 func (s *App) DeleteWallet(ctx context.Context, id int) error {
 	err := s.store.DeleteWallet(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrWalletNotFound) {
-			return repository.ErrWalletNotFound
-		}
 		return fmt.Errorf("err deleting wallet : %w", err)
 	}
 	return nil

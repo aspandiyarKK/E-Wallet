@@ -1,0 +1,27 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build EWallet/cmd/ewallet" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+    <module name="EWallet" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="API_KEY" value="fcMPeBqh49hXoGziH4US5YqMbEA4njMi" />
+      <env name="PG_DSN" value="postgres://postgres:secret@localhost:5433/postgres" />
+      <env name="SECRET_JWT" value="testsecret" />
+      <env name="XR_HOST" value="https://api.apilayer.com/exchangerates_data/convert?to=" />
+    </envs>
+    <EXTENSION ID="net.ashald.envfile">
+      <option name="IS_ENABLED" value="false" />
+      <option name="IS_SUBST" value="false" />
+      <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+      <option name="IS_IGNORE_MISSING_FILES" value="false" />
+      <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+      <ENTRIES>
+        <ENTRY IS_ENABLED="true" PARSER="runconfig" />
+      </ENTRIES>
+    </EXTENSION>
+    <kind value="PACKAGE" />
+    <package value="EWallet/cmd/ewallet" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/ewallet/main.go" />
+    <method v="2" />
+  </configuration>
+</component>
