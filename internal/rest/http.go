@@ -18,6 +18,7 @@ type Router struct {
 	log    *logrus.Entry
 	router *gin.Engine
 	app    App
+	secret []byte
 }
 
 type App interface {
@@ -30,15 +31,16 @@ type App interface {
 	Transfer(ctx context.Context, id int, request *repository.FinRequest) error
 }
 
-func NewRouter(log *logrus.Logger, app App) *Router {
+func NewRouter(log *logrus.Logger, app App, secret string) *Router {
 	r := &Router{
 		log:    log.WithField("component", "router"),
 		router: gin.Default(),
 		app:    app,
+		secret: []byte(secret),
 	}
 	r.router.GET("/metrics", prometheusHandler())
-	r.router.POST("/auth", authHandler)
-	g := r.router.Group("/api/v1").Use(jwtAuth())
+	r.router.POST("/auth", r.authHandler)
+	g := r.router.Group("/api/v1").Use(r.jwtAuth())
 	g.GET("/wallet/:id", r.getWallet)
 	g.POST("/wallet", r.addWallet)
 	g.DELETE("/wallet/:id", r.deleteWallet)

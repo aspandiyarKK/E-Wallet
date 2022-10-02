@@ -25,8 +25,9 @@ const port = 3000
 var (
 	pgDSN  = os.Getenv("PG_DSN")
 	addr   = fmt.Sprintf("localhost:%d", port)
-	xrHost = os.Getenv("xrHost")
-	apiKey = os.Getenv("apiKey")
+	xrHost = os.Getenv("XR_HOST")
+	apiKey = os.Getenv("API_KEY")
+	secret = os.Getenv("SECRET_JWT")
 )
 
 func main() {
@@ -43,7 +44,7 @@ func main() {
 	}
 	exch := exchange.NewExchangeRate(log, xrHost, apiKey)
 	app := internal.NewApp(log, pg, exch)
-	r := rest.NewRouter(log, app)
+	r := rest.NewRouter(log, app, secret)
 	if err = r.Run(ctx, addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Panicf("Error starting server: %v", err)
 	}

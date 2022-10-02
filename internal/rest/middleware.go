@@ -10,16 +10,21 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-const TokenExpireDuration = time.Hour * 1000
-
-var secret = []byte("Goal:Senior in 2 years")
+const (
+	TokenExpireDuration = time.Hour * 1000
+	sessionKey          = "session"
+)
 
 type MyClaims struct {
 	Username string `json:"username"`
 	jwt.StandardClaims
 }
 
-func GenToken(username string) (string, error) {
+type UserSession struct {
+	Username string
+}
+
+func (r *Router) GenToken(username string) (string, error) {
 	c := MyClaims{
 		username,
 		jwt.StandardClaims{
@@ -29,12 +34,12 @@ func GenToken(username string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
-	return token.SignedString(secret)
+	return token.SignedString(r.secret)
 }
 
-func ParseToken(tokenString string) (*MyClaims, error) {
+func (r *Router) ParseToken(tokenString string) (*MyClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &MyClaims{}, func(token *jwt.Token) (i interface{}, err error) {
-		return secret, nil
+		return r.secret, nil
 	})
 	if err != nil {
 		return nil, err
@@ -45,7 +50,7 @@ func ParseToken(tokenString string) (*MyClaims, error) {
 	return nil, fmt.Errorf("invalid token: %w", err)
 }
 
-func jwtAuth() func(c *gin.Context) {
+func (r *Router) jwtAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		authHeader := c.Request.Header.Get("Authorization")
 		if authHeader == "" {
@@ -59,13 +64,30 @@ func jwtAuth() func(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		id, err := ParseToken(parts[1])
+		claims, err := r.ParseToken(parts[1])
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, err)
 			c.Abort()
 			return
 		}
-		c.Set("id", id)
+		u := UserSession{
+			Username: claims.Username,
+		}
+		c.Set(sessionKey, &u)
 		c.Next()
 	}
+}
+
+func (r *Router) GetUserSession(c *gin.Context) *UserSession {
+	u, ok := c.Get(sessionKey)
+	if !ok {
+		r.log.Errorf("session not found in context")
+		return &UserSession{}
+	}
+	us, ok := u.(*UserSession)
+	if !ok {
+		r.log.Errorf("invalid session type")
+		return &UserSession{}
+	}
+	return us
 }

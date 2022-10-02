@@ -10,6 +10,6 @@ up:
 down:
 	docker-compose down
 
-test:
+test:up
 	go test -v ./...
 	make down

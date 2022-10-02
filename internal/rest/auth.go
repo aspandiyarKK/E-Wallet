@@ -1,8 +1,9 @@
 package rest
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserInfo struct {
@@ -10,7 +11,7 @@ type UserInfo struct {
 	Password string `json:"password"`
 }
 
-func authHandler(c *gin.Context) {
+func (r *Router) authHandler(c *gin.Context) {
 	var user UserInfo
 	err := c.BindJSON(&user)
 	if err != nil {
@@ -18,7 +19,7 @@ func authHandler(c *gin.Context) {
 		return
 	}
 	if user.Username == "aspan" && user.Password == "12345" {
-		tokenString, _ := GenToken(user.Username)
+		tokenString, _ := r.GenToken(user.Username)
 		c.JSON(http.StatusOK, tokenString)
 		return
 	} else {

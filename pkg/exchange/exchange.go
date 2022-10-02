@@ -3,12 +3,15 @@ package exchange
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
 )
+
+var ErrCurrencyNotFound = errors.New("err currency not found")
 
 type Rate struct {
 	log    *logrus.Entry
@@ -28,6 +31,10 @@ type Resp struct {
 	} `json:"info"`
 	Date   string  `json:"date"`
 	Result float64 `json:"result"`
+	Error  *struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
 }
 
 func NewExchangeRate(log *logrus.Logger, xrHost string, apiKey string) *Rate {
@@ -45,22 +52,32 @@ func (e *Rate) GetRate(ctx context.Context, currency string, amount float64) (fl
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	req.Header.Set("apikey", e.apiKey)
-
 	if err != nil {
 		fmt.Println(err)
 	}
 	res, err := client.Do(req)
+	if err != nil {
+		return 1.0, fmt.Errorf("exchange api internal srver error: %w", err)
+	}
 	if res.Body != nil {
 		defer res.Body.Close()
 	}
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return 0, fmt.Errorf("converting error: %w", err)
+
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusNotFound:
+		return 0, fmt.Errorf("%s: %w", currency, ErrCurrencyNotFound)
+	default:
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return 0, fmt.Errorf("err handling another error (unexpected status code: %d),fail to read response body: %w", res.StatusCode, err)
+		}
+		return 0, fmt.Errorf("unexpected status code: %d body: %s", res.StatusCode, string(body))
 	}
-	var s Resp
-	err = json.Unmarshal(body, &s)
+	var result Resp
+	err = json.NewDecoder(res.Body).Decode(&result)
 	if err != nil {
-		return 0, fmt.Errorf("invalid input: %w", err)
+		return 0, fmt.Errorf("err decoding response: %w", err)
 	}
-	return s.Result, nil
+	return result.Result, nil
 }
