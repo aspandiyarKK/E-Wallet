@@ -159,9 +159,16 @@ func (r *Router) deposit(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
+	if !isValidUUID(input.UUID) {
+		c.JSON(http.StatusBadRequest, "incorrect format of uuid")
+		return
+	}
 	err = r.app.Deposit(c, id, &input)
 	switch {
 	case err == nil:
+	case errors.Is(err, repository.ErrDuplicateKey):
+		c.JSON(http.StatusConflict, err)
+		return
 	case errors.Is(err, repository.ErrWalletNotFound):
 		c.JSON(http.StatusNotFound, err)
 		return
@@ -186,9 +193,16 @@ func (r *Router) withdrawal(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
+	if !isValidUUID(input.UUID) {
+		c.JSON(http.StatusBadRequest, "incorrect format of uuid")
+		return
+	}
 	err = r.app.Withdrawal(c, id, &input)
 	switch {
 	case err == nil:
+	case errors.Is(err, repository.ErrDuplicateKey):
+		c.JSON(http.StatusConflict, err)
+		return
 	case errors.Is(err, repository.ErrInsufficientFunds):
 		c.JSON(http.StatusBadRequest, err)
 		return
@@ -216,9 +230,16 @@ func (r *Router) transfer(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
+	if !isValidUUID(input.UUID) {
+		c.JSON(http.StatusBadRequest, "incorrect format of uuid")
+		return
+	}
 	if err = r.app.Transfer(c, id, &input); err != nil {
 		switch {
 		case err == nil:
+		case errors.Is(err, repository.ErrDuplicateKey):
+			c.JSON(http.StatusConflict, err)
+			return
 		case errors.Is(err, repository.ErrInsufficientFunds):
 			c.JSON(http.StatusBadRequest, err)
 			return

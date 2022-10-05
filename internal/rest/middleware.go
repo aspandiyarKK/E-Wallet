@@ -8,11 +8,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 )
 
 const (
 	TokenExpireDuration = time.Hour * 1000
 	sessionKey          = "session"
+	uuidKey             = "UUID"
 )
 
 type MyClaims struct {
@@ -90,4 +92,9 @@ func (r *Router) GetUserSession(c *gin.Context) *UserSession {
 		return &UserSession{}
 	}
 	return us
+}
+
+func isValidUUID(u string) bool {
+	_, err := uuid.Parse(u)
+	return err == nil
 }

@@ -10,6 +10,9 @@ import (
 
 	"EWallet/pkg/metrics"
 
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
+
 	migrate "github.com/rubenv/sql-migrate"
 
 	"github.com/jmoiron/sqlx"
@@ -28,6 +31,7 @@ type Wallet struct {
 type FinRequest struct {
 	Sum          float64 `json:"sum"`
 	WalletTarget int     `json:"walletTarget"`
+	UUID         string  `json:"uuid"`
 }
 type PG struct {
 	log *logrus.Entry
@@ -39,6 +43,7 @@ var (
 	ErrInsufficientFunds    = fmt.Errorf("err insuficient funds")
 	ErrWalletNotFound       = fmt.Errorf("err wallet not found")
 	ErrWalletTargetNotFound = fmt.Errorf("err wallet target  not found")
+	ErrDuplicateKey         = fmt.Errorf("err duplicate key")
 )
 
 func NewRepo(ctx context.Context, log *logrus.Logger, dsn string) (*PG, error) {
@@ -170,7 +175,15 @@ func (pg *PG) Deposit(ctx context.Context, id int, request *FinRequest) error {
 	defer func() {
 		metrics.MetricDBRequestsDuration.WithLabelValues("Deposit").Observe(time.Since(started).Seconds())
 	}()
-	query := `UPDATE wallet SET balance = balance + $1 WHERE id = $2`
+	query := `INSERT INTO transaction (uuid) VALUES ($1)`
+	_, err := pg.db.ExecContext(ctx, query, request.UUID)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		if pgErr.Code == pgerrcode.UniqueViolation {
+			return ErrDuplicateKey
+		}
+	}
+	query = `UPDATE wallet SET balance = balance + $1 WHERE id = $2`
 	res, err := pg.db.ExecContext(ctx, query, request.Sum, id)
 	cnt, _ := res.RowsAffected()
 	if cnt == 0 {
@@ -199,10 +212,18 @@ func (pg *PG) Withdrawal(ctx context.Context, id int, request *FinRequest) error
 			pg.log.Error("err rolling back transfer transaction")
 		}
 	}()
+	query := `INSERT INTO transaction (uuid) VALUES ($1)`
+	_, err = pg.db.ExecContext(ctx, query, request.UUID)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		if pgErr.Code == pgerrcode.UniqueViolation {
+			return ErrDuplicateKey
+		}
+	}
 	if err = pg.checkBalance(ctx, tx, id, request.Sum); err != nil {
 		return err
 	}
-	query := `UPDATE wallet SET balance = balance - $1 WHERE id = $2 `
+	query = `UPDATE wallet SET balance = balance - $1 WHERE id = $2 `
 	res, err := tx.ExecContext(ctx, query, request.Sum, id)
 	cnt, _ := res.RowsAffected()
 	if cnt == 0 {
@@ -236,10 +257,19 @@ func (pg *PG) Transfer(ctx context.Context, id int, request *FinRequest) error {
 			pg.log.Error("err rolling back transfer transaction")
 		}
 	}()
+
+	query := `INSERT INTO transaction (uuid) VALUES ($1)`
+	_, err = pg.db.ExecContext(ctx, query, request.UUID)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		if pgErr.Code == pgerrcode.UniqueViolation {
+			return ErrDuplicateKey
+		}
+	}
 	if err = pg.checkBalance(ctx, tx, id, request.Sum); err != nil {
 		return err
 	}
-	query := `UPDATE wallet SET balance = balance - $1 WHERE id = $2 RETURNING balance`
+	query = `UPDATE wallet SET balance = balance - $1 WHERE id = $2 RETURNING balance`
 	if res, err := tx.ExecContext(ctx, query, request.Sum, id); err != nil {
 		metrics.MetricErrCount.WithLabelValues("Transfer").Inc()
 		cnt, _ := res.RowsAffected()
