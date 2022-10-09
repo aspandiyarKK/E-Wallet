@@ -33,6 +33,15 @@ type FinRequest struct {
 	WalletTarget int     `json:"walletTarget"`
 	UUID         string  `json:"uuid"`
 }
+type Transaction struct {
+	Id        int       `json:"transaction_id" db:"id"`
+	UUID      string    `json:"uuid" db:"uuid"`
+	FromId    int       `json:"from_id" db:"from_id"`
+	ToId      int       `json:"to_id" db:"to_id"`
+	Sum       float64   `json:"sum" db:"sum"`
+	Operation string    `json:"operation" db:"operation"`
+	Date      time.Time `json:"date" db:"date"`
+}
 type PG struct {
 	log *logrus.Entry
 	db  *sqlx.DB
@@ -44,6 +53,7 @@ var (
 	ErrWalletNotFound       = fmt.Errorf("err wallet not found")
 	ErrWalletTargetNotFound = fmt.Errorf("err wallet target  not found")
 	ErrDuplicateKey         = fmt.Errorf("err duplicate key")
+	ErrTransactionNotFound  = fmt.Errorf("err transaction not found")
 )
 
 func NewRepo(ctx context.Context, log *logrus.Logger, dsn string) (*PG, error) {
@@ -175,8 +185,8 @@ func (pg *PG) Deposit(ctx context.Context, id int, request *FinRequest) error {
 	defer func() {
 		metrics.MetricDBRequestsDuration.WithLabelValues("Deposit").Observe(time.Since(started).Seconds())
 	}()
-	query := `INSERT INTO transaction (uuid) VALUES ($1)`
-	_, err := pg.db.ExecContext(ctx, query, request.UUID)
+	query := `INSERT INTO transaction (uuid,from_id,operation,sum) VALUES ($1,$2,$3,$4)`
+	_, err := pg.db.ExecContext(ctx, query, request.UUID, id, "deposit", request.Sum)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -212,8 +222,8 @@ func (pg *PG) Withdrawal(ctx context.Context, id int, request *FinRequest) error
 			pg.log.Error("err rolling back transfer transaction")
 		}
 	}()
-	query := `INSERT INTO transaction (uuid) VALUES ($1)`
-	_, err = pg.db.ExecContext(ctx, query, request.UUID)
+	query := `INSERT INTO transaction (uuid,from_id,operation,sum) VALUES ($1,$2,$3,$4)`
+	_, err = pg.db.ExecContext(ctx, query, request.UUID, id, "deposit", request.Sum)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -258,8 +268,8 @@ func (pg *PG) Transfer(ctx context.Context, id int, request *FinRequest) error {
 		}
 	}()
 
-	query := `INSERT INTO transaction (uuid) VALUES ($1)`
-	_, err = pg.db.ExecContext(ctx, query, request.UUID)
+	query := `INSERT INTO transaction (uuid,from_id,to_id,operation,sum) VALUES ($1,$2,$3,$4)`
+	_, err = pg.db.ExecContext(ctx, query, request.UUID, id, request.WalletTarget, "deposit", request.Sum)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -278,6 +288,8 @@ func (pg *PG) Transfer(ctx context.Context, id int, request *FinRequest) error {
 		}
 		return fmt.Errorf("err withdrawaling the Wallet: %w", err)
 	}
+	query = `INSERT INTO transaction (uuid,user_id,operation,sum) VALUES ($1,$2,$3,$4)`
+	_, err = pg.db.ExecContext(ctx, query, request.UUID, id, "trasfer sending", request.Sum)
 	query = `UPDATE wallet SET balance = balance + $1 WHERE id = $2 RETURNING balance`
 	if res, err := tx.ExecContext(ctx, query, request.Sum, request.WalletTarget); err != nil {
 		cnt, _ := res.RowsAffected()
@@ -335,4 +347,21 @@ func (pg *PG) CheckBalance(ctx context.Context, id int) (float64, error) {
 		return 0, fmt.Errorf("err checking balance: %w", err)
 	}
 	return balance, nil
+}
+
+func (pg *PG) GetTransactions(ctx context.Context, id int, order string) (*[]Transaction, error) {
+	var ans []Transaction
+	var query string
+	if order == "" {
+		query = `SELECT (id,uuid,from_id,to_id,operation,sum,date) FROM transaction WHERE from_id=$1 ORDER BY date DESC`
+	} else {
+		query = `SELECT (id,uuid,from_id,to_id,operation,sum,date) FROM transaction WHERE from_id=$1 ORDER BY sum DESC`
+	}
+	if err := pg.db.SelectContext(ctx, &ans, query, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &[]Transaction{}, ErrTransactionNotFound
+		}
+		return &[]Transaction{}, fmt.Errorf("err getting transaction : %w", err)
+	}
+	return &ans, nil
 }

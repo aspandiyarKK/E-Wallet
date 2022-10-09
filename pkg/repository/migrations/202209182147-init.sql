@@ -12,8 +12,13 @@ CREATE TABLE IF NOT EXISTS wallet
 );
 CREATE TABLE IF NOT EXISTS transaction
 (
-    id              bigserial PRIMARY KEY,
-    uuid            text UNIQUE    NOT NULL
+    id        bigserial PRIMARY KEY,
+    uuid      text UNIQUE NOT NULL,
+    from_id   integer     NOT NULL,
+    to_id     integer    DEFAULT NULL,
+    operation varchar NOT NULL,
+    sum       numeric(10, 2) NOT NULL,
+    date      timestamptz NOT NULL DEFAULT now()
 );
 -- +migrate Down
 DROP TABLE wallet CASCADE;

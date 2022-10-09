@@ -29,6 +29,7 @@ type App interface {
 	Deposit(ctx context.Context, id int, request *repository.FinRequest) error
 	Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error
 	Transfer(ctx context.Context, id int, request *repository.FinRequest) error
+	GetTransactions(ctx context.Context, id int, order string) (*[]repository.Transaction, error)
 }
 
 func NewRouter(log *logrus.Logger, app App, secret string) *Router {
@@ -42,6 +43,7 @@ func NewRouter(log *logrus.Logger, app App, secret string) *Router {
 	r.router.POST("/auth", r.authHandler)
 	g := r.router.Group("/api/v1").Use(r.jwtAuth())
 	g.GET("/wallet/:id", r.getWallet)
+	g.GET("/transaction/:id", r.transaction)
 	g.POST("/wallet", r.addWallet)
 	g.DELETE("/wallet/:id", r.deleteWallet)
 	g.PUT("/wallet/:id", r.updateWallet)
@@ -253,4 +255,26 @@ func (r *Router) transfer(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, "Success transferring")
+}
+
+func (r *Router) transaction(c *gin.Context) {
+	val := c.Param("id")
+	order := c.Query("order")
+	id, err := strconv.Atoi(val)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
+	trans, err := r.app.GetTransactions(c, id, order)
+	switch {
+	case err == nil:
+	case errors.Is(err, repository.ErrTransactionNotFound):
+		c.JSON(http.StatusNotFound, err)
+		return
+	default:
+		r.log.Errorf("failed to get Transactions: %v", err)
+		c.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, trans)
 }

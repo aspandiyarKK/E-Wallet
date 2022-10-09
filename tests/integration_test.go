@@ -374,6 +374,7 @@ func (s *IntegrationTestSuite) TestDepoWalletBadRequest() {
 	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id)+"/deposit", "", nil)
 	require.Equal(s.T(), http.StatusBadRequest, resp.StatusCode)
 }
+
 func (s *IntegrationTestSuite) TestDepoWalletNonConflict() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
@@ -445,6 +446,7 @@ func (s *IntegrationTestSuite) TestDepoConflict() {
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), walletResp.Balance, 2000.0)
 }
+
 func (s *IntegrationTestSuite) TestWithDrawWallet() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
@@ -490,6 +492,7 @@ func (s *IntegrationTestSuite) TestWithDrawWalletNotFound() {
 	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id+1)+"/withdraw", finreq, nil)
 	require.Equal(s.T(), http.StatusNotFound, resp.StatusCode)
 }
+
 func (s *IntegrationTestSuite) TestWithDrawWalletNonConflict() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
@@ -522,6 +525,7 @@ func (s *IntegrationTestSuite) TestWithDrawWalletNonConflict() {
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), walletResp.Balance, 0.0)
 }
+
 func (s *IntegrationTestSuite) TestWithDrawConflict() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
@@ -548,6 +552,7 @@ func (s *IntegrationTestSuite) TestWithDrawConflict() {
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), walletResp.Balance, 1000.0)
 }
+
 func (s *IntegrationTestSuite) TestWithDrawWalletBadRequest() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
@@ -606,6 +611,7 @@ func (s *IntegrationTestSuite) TestTransferWallet() {
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), walletRespGetter.Balance, 1600.0)
 }
+
 func (s *IntegrationTestSuite) TestTransferWalletNonConflict() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
@@ -707,6 +713,7 @@ func (s *IntegrationTestSuite) TestTransferWalletConflict() {
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), walletRespGetter.Balance, 1600.0)
 }
+
 func (s *IntegrationTestSuite) TestTransferWalletNotFound() {
 	ctx := context.Background()
 	path := s.url + "/wallet"

@@ -17,6 +17,7 @@ type Storage interface {
 	Deposit(ctx context.Context, id int, request *repository.FinRequest) error
 	Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error
 	Transfer(ctx context.Context, id int, request *repository.FinRequest) error
+	GetTransactions(ctx context.Context, id int, order string) (*[]repository.Transaction, error)
 }
 type Exchange interface {
 	GetRate(ctx context.Context, currency string, amount float64) (float64, error)
@@ -95,4 +96,12 @@ func (s *App) Transfer(ctx context.Context, id int, request *repository.FinReque
 		return fmt.Errorf("err transferring the wallet: %w", err)
 	}
 	return nil
+}
+
+func (s *App) GetTransactions(ctx context.Context, id int, order string) (*[]repository.Transaction, error) {
+	trans, err := s.store.GetTransactions(ctx, id, order)
+	if err != nil {
+		return &[]repository.Transaction{}, fmt.Errorf("err getting the transactions: %w", err)
+	}
+	return trans, nil
 }
