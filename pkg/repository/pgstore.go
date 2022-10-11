@@ -37,7 +37,7 @@ type Transaction struct {
 	Id        int       `json:"transaction_id" db:"id"`
 	UUID      string    `json:"uuid" db:"uuid"`
 	FromId    int       `json:"from_id" db:"from_id"`
-	ToId      int       `json:"to_id" db:"to_id"`
+	ToId      *int      `json:"to_id" db:"to_id"`
 	Sum       float64   `json:"sum" db:"sum"`
 	Operation string    `json:"operation" db:"operation"`
 	Date      time.Time `json:"date" db:"date"`
@@ -268,8 +268,8 @@ func (pg *PG) Transfer(ctx context.Context, id int, request *FinRequest) error {
 		}
 	}()
 
-	query := `INSERT INTO transaction (uuid,from_id,to_id,operation,sum) VALUES ($1,$2,$3,$4)`
-	_, err = pg.db.ExecContext(ctx, query, request.UUID, id, request.WalletTarget, "deposit", request.Sum)
+	query := `INSERT INTO transaction (uuid,from_id,to_id,operation,sum) VALUES ($1,$2,$3,$4,$5)`
+	_, err = pg.db.ExecContext(ctx, query, request.UUID, id, request.WalletTarget, "transfer", request.Sum)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -288,8 +288,6 @@ func (pg *PG) Transfer(ctx context.Context, id int, request *FinRequest) error {
 		}
 		return fmt.Errorf("err withdrawaling the Wallet: %w", err)
 	}
-	query = `INSERT INTO transaction (uuid,user_id,operation,sum) VALUES ($1,$2,$3,$4)`
-	_, err = pg.db.ExecContext(ctx, query, request.UUID, id, "trasfer sending", request.Sum)
 	query = `UPDATE wallet SET balance = balance + $1 WHERE id = $2 RETURNING balance`
 	if res, err := tx.ExecContext(ctx, query, request.Sum, request.WalletTarget); err != nil {
 		cnt, _ := res.RowsAffected()
@@ -349,19 +347,20 @@ func (pg *PG) CheckBalance(ctx context.Context, id int) (float64, error) {
 	return balance, nil
 }
 
-func (pg *PG) GetTransactions(ctx context.Context, id int, order string) (*[]Transaction, error) {
+func (pg *PG) GetTransactions(ctx context.Context, id int, order string) ([]Transaction, error) {
 	var ans []Transaction
 	var query string
 	if order == "" {
-		query = `SELECT (id,uuid,from_id,to_id,operation,sum,date) FROM transaction WHERE from_id=$1 ORDER BY date DESC`
+		query = `SELECT id,from_id,to_id,operation,sum,date FROM transaction WHERE from_id=$1 ORDER BY date DESC`
 	} else {
-		query = `SELECT (id,uuid,from_id,to_id,operation,sum,date) FROM transaction WHERE from_id=$1 ORDER BY sum DESC`
+		query = `SELECT id,from_id,to_id,operation,sum,date FROM transaction WHERE from_id=$1 ORDER BY sum DESC`
+	}
+	_, err := pg.GetWallet(ctx, id, "")
+	if errors.Is(err, ErrWalletNotFound) {
+		return nil, ErrWalletNotFound
 	}
 	if err := pg.db.SelectContext(ctx, &ans, query, id); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return &[]Transaction{}, ErrTransactionNotFound
-		}
-		return &[]Transaction{}, fmt.Errorf("err getting transaction : %w", err)
+		return nil, fmt.Errorf("err getting transaction : %w", err)
 	}
-	return &ans, nil
+	return ans, nil
 }

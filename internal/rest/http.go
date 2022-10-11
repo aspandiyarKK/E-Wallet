@@ -29,7 +29,7 @@ type App interface {
 	Deposit(ctx context.Context, id int, request *repository.FinRequest) error
 	Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error
 	Transfer(ctx context.Context, id int, request *repository.FinRequest) error
-	GetTransactions(ctx context.Context, id int, order string) (*[]repository.Transaction, error)
+	GetTransactions(ctx context.Context, id int, order string) ([]repository.Transaction, error)
 }
 
 func NewRouter(log *logrus.Logger, app App, secret string) *Router {
@@ -268,7 +268,7 @@ func (r *Router) transaction(c *gin.Context) {
 	trans, err := r.app.GetTransactions(c, id, order)
 	switch {
 	case err == nil:
-	case errors.Is(err, repository.ErrTransactionNotFound):
+	case errors.Is(err, repository.ErrWalletNotFound):
 		c.JSON(http.StatusNotFound, err)
 		return
 	default:

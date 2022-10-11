@@ -385,11 +385,11 @@ func (s *IntegrationTestSuite) TestDepoWalletNonConflict() {
 
 	finreq := repository.FinRequest{
 		Sum:  1000.0,
-		UUID: "f7eb5a3b-d9d2-11ec-abbd-0242ac170004",
+		UUID: "f7eb5a3b-d9d2-11ec-abfd-0242ac170004",
 	}
 	finreq2 := repository.FinRequest{
 		Sum:  1000.0,
-		UUID: "f7eb5a3b-d9d2-11ec-abbd-0242ac160004",
+		UUID: "f7eb5a3b-d9d2-11ec-abed-0242ac160004",
 	}
 	var idMap map[string]int
 	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
@@ -644,7 +644,7 @@ func (s *IntegrationTestSuite) TestTransferWalletNonConflict() {
 	finreq2 := repository.FinRequest{
 		Sum:          200.0,
 		WalletTarget: idGetter,
-		UUID:         "f7eb5a3b-d9d2-14ec-abbd-0242ac150008",
+		UUID:         "f7eb5a3b-d9d2-02ec-abbd-0242ac150008",
 	}
 	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(idSender)+"/transfer", finreq, nil)
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
@@ -689,13 +689,13 @@ func (s *IntegrationTestSuite) TestTransferWalletConflict() {
 	finreq := repository.FinRequest{
 		Sum:          600.0,
 		WalletTarget: idGetter,
-		UUID:         "f7eb5a3b-d9d2-17ec-abbd-0242ac150008",
+		UUID:         "f7eb5a3b-d9d2-19ec-abbd-9442ac150008",
 	}
 
 	finreq2 := repository.FinRequest{
 		Sum:          200.0,
 		WalletTarget: idGetter,
-		UUID:         "f7eb5a3b-d9d2-17ec-abbd-0242ac150008",
+		UUID:         "f7eb5a3b-d9d2-19ec-abbd-9442ac150008",
 	}
 	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(idSender)+"/transfer", finreq, nil)
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
@@ -769,6 +769,103 @@ func (s *IntegrationTestSuite) TestTransferWalletBadRequest() {
 
 	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(idSender)+"/transfer", " ", nil)
 	require.Equal(s.T(), http.StatusBadRequest, resp.StatusCode)
+}
+func (s *IntegrationTestSuite) TestGetTransaction() {
+	ctx := context.Background()
+	path := s.url + "/wallet"
+	wallet := repository.Wallet{
+		Owner:   "test1",
+		Balance: 1000,
+	}
+
+	finreq := repository.FinRequest{
+		Sum:  1000.0,
+		UUID: "f7eb5a3b-d9d2-11ec-abbd-0242ac159934",
+	}
+	finreq2 := repository.FinRequest{
+		Sum:  1000.0,
+		UUID: "f7eb5a3b-d9d2-11ec-abbd-0242ac150769",
+	}
+	var idMap map[string]int
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
+	id, ok := idMap["id"]
+	require.True(s.T(), ok)
+
+	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id)+"/deposit", finreq, nil)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+
+	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id)+"/deposit", finreq2, nil)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+
+	var ans []repository.Transaction
+	path = s.url + "/transaction"
+	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(id), nil, &ans)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), len(ans), 3)
+}
+
+func (s *IntegrationTestSuite) TestGetTransactionBySum() {
+	ctx := context.Background()
+	path := s.url + "/wallet"
+	wallet := repository.Wallet{
+		Owner:   "test1",
+		Balance: 1000,
+	}
+
+	finreq := repository.FinRequest{
+		Sum:  1000.0,
+		UUID: "f7eb5a3b-d9d2-11ec-abbd-0242ac019934",
+	}
+	finreq2 := repository.FinRequest{
+		Sum:  3000.0,
+		UUID: "f7eb5a3b-d9d2-11ec-abbd-0242ac819934",
+	}
+
+	var idMap map[string]int
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
+	id, ok := idMap["id"]
+	require.True(s.T(), ok)
+
+	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id)+"/deposit", finreq, nil)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+
+	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id)+"/deposit", finreq2, nil)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+
+	var ans []repository.Transaction
+	path = s.url + "/transaction"
+	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(id)+"?order=sum", nil, &ans)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+	require.Equal(s.T(), ans[0].Sum, finreq2.Sum)
+	require.Equal(s.T(), ans[1].Sum, finreq.Sum)
+}
+func (s *IntegrationTestSuite) TestGetTransactionNotFound() {
+	ctx := context.Background()
+	path := s.url + "/wallet"
+	wallet := repository.Wallet{
+		Owner:   "test1",
+		Balance: 1000,
+	}
+
+	finreq := repository.FinRequest{
+		Sum:  1000.0,
+		UUID: "f7eb5a3b-d9d2-11ec-abbd-0242ac219934",
+	}
+
+	var idMap map[string]int
+	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
+	require.Equal(s.T(), http.StatusCreated, resp.StatusCode)
+	id, ok := idMap["id"]
+	require.True(s.T(), ok)
+
+	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(id)+"/deposit", finreq, nil)
+	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
+
+	path = s.url + "/transaction"
+	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(id+1), nil, nil)
+	require.Equal(s.T(), http.StatusNotFound, resp.StatusCode)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {
