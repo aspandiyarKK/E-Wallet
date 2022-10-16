@@ -75,12 +75,6 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	require.NoError(s.T(), err)
 }
 
-func (s *IntegrationTestSuite) SetupTest() {
-}
-
-func (s *IntegrationTestSuite) TearDownTest() {
-}
-
 func (s *IntegrationTestSuite) TestGetWalletNotFound() {
 	ctx := context.Background()
 	wallet := repository.Wallet{
@@ -447,7 +441,7 @@ func (s *IntegrationTestSuite) TestDepoConflict() {
 	require.Equal(s.T(), walletResp.Balance, 2000.0)
 }
 
-func (s *IntegrationTestSuite) TestWithDrawWallet() {
+func (s *IntegrationTestSuite) TestWithdrawWallet() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
 	wallet := repository.Wallet{
@@ -472,7 +466,7 @@ func (s *IntegrationTestSuite) TestWithDrawWallet() {
 	require.Equal(s.T(), walletResp.Balance, 1000.0)
 }
 
-func (s *IntegrationTestSuite) TestWithDrawWalletNotFound() {
+func (s *IntegrationTestSuite) TestWithdrawWalletNotFound() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
 	wallet := repository.Wallet{
@@ -493,7 +487,7 @@ func (s *IntegrationTestSuite) TestWithDrawWalletNotFound() {
 	require.Equal(s.T(), http.StatusNotFound, resp.StatusCode)
 }
 
-func (s *IntegrationTestSuite) TestWithDrawWalletNonConflict() {
+func (s *IntegrationTestSuite) TestWithdrawWalletNonConflict() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
 	wallet := repository.Wallet{
@@ -526,7 +520,7 @@ func (s *IntegrationTestSuite) TestWithDrawWalletNonConflict() {
 	require.Equal(s.T(), walletResp.Balance, 0.0)
 }
 
-func (s *IntegrationTestSuite) TestWithDrawConflict() {
+func (s *IntegrationTestSuite) TestWithdrawConflict() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
 	wallet := repository.Wallet{
@@ -553,7 +547,7 @@ func (s *IntegrationTestSuite) TestWithDrawConflict() {
 	require.Equal(s.T(), walletResp.Balance, 1000.0)
 }
 
-func (s *IntegrationTestSuite) TestWithDrawWalletBadRequest() {
+func (s *IntegrationTestSuite) TestWithdrawWalletBadRequest() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
 	wallet := repository.Wallet{
@@ -770,6 +764,7 @@ func (s *IntegrationTestSuite) TestTransferWalletBadRequest() {
 	resp = s.processRequest(ctx, http.MethodPut, path+"/"+strconv.Itoa(idSender)+"/transfer", " ", nil)
 	require.Equal(s.T(), http.StatusBadRequest, resp.StatusCode)
 }
+
 func (s *IntegrationTestSuite) TestGetTransaction() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
@@ -835,12 +830,16 @@ func (s *IntegrationTestSuite) TestGetTransactionBySum() {
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 
 	var ans []repository.Transaction
+	// TODO: url
 	path = s.url + "/transaction"
 	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(id)+"?order=sum", nil, &ans)
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 	require.Equal(s.T(), ans[0].Sum, finreq2.Sum)
 	require.Equal(s.T(), ans[1].Sum, finreq.Sum)
 }
+
+// order by ... asc/desc, limit + offset
+
 func (s *IntegrationTestSuite) TestGetTransactionNotFound() {
 	ctx := context.Background()
 	path := s.url + "/wallet"

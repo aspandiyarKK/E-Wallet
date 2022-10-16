@@ -16,4 +16,9 @@ var (
 		Subsystem: "generic",
 		Name:      "err_count",
 	}, []string{"method"})
+	MetricHTTPRequestDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "ewallet",
+		Subsystem: "generic",
+		Name:      "http_request_duration",
+	})
 )

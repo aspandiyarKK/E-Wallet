@@ -1,11 +1,13 @@
 package repository
 
 import (
+	"EWallet/pkg/models"
 	"context"
 	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"EWallet/pkg/metrics"
@@ -127,7 +129,7 @@ func (pg *PG) CreateWallet(ctx context.Context, wallet Wallet) (int, error) {
 	return id, nil
 }
 
-func (pg *PG) GetWallet(ctx context.Context, id int, currency string) (Wallet, error) {
+func (pg *PG) GetWallet(ctx context.Context, id int) (Wallet, error) {
 	started := time.Now()
 	defer func() {
 		metrics.MetricDBRequestsDuration.WithLabelValues("GetWallet").Observe(time.Since(started).Seconds())
@@ -185,8 +187,20 @@ func (pg *PG) Deposit(ctx context.Context, id int, request *FinRequest) error {
 	defer func() {
 		metrics.MetricDBRequestsDuration.WithLabelValues("Deposit").Observe(time.Since(started).Seconds())
 	}()
+	tx, err := pg.db.BeginTxx(ctx, nil)
+	if err != nil {
+		metrics.MetricErrCount.WithLabelValues("Deposit").Inc()
+		return fmt.Errorf("err starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			if err = tx.Rollback(); err != nil {
+				pg.log.Error("err rolling back transaction")
+			}
+		}
+	}()
 	query := `INSERT INTO transaction (uuid,from_id,operation,sum) VALUES ($1,$2,$3,$4)`
-	_, err := pg.db.ExecContext(ctx, query, request.UUID, id, "deposit", request.Sum)
+	_, err = tx.ExecContext(ctx, query, request.UUID, id, "deposit", request.Sum)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -194,7 +208,7 @@ func (pg *PG) Deposit(ctx context.Context, id int, request *FinRequest) error {
 		}
 	}
 	query = `UPDATE wallet SET balance = balance + $1 WHERE id = $2`
-	res, err := pg.db.ExecContext(ctx, query, request.Sum, id)
+	res, err := tx.ExecContext(ctx, query, request.Sum, id)
 	cnt, _ := res.RowsAffected()
 	if cnt == 0 {
 		return ErrWalletNotFound
@@ -202,6 +216,10 @@ func (pg *PG) Deposit(ctx context.Context, id int, request *FinRequest) error {
 	if err != nil {
 		metrics.MetricErrCount.WithLabelValues("Deposit").Inc()
 		return fmt.Errorf("err depositing the Wallet: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		metrics.MetricErrCount.WithLabelValues("Deposit").Inc()
+		return fmt.Errorf("err committing transaction: %w", err)
 	}
 	return nil
 }
@@ -223,7 +241,7 @@ func (pg *PG) Withdrawal(ctx context.Context, id int, request *FinRequest) error
 		}
 	}()
 	query := `INSERT INTO transaction (uuid,from_id,operation,sum) VALUES ($1,$2,$3,$4)`
-	_, err = pg.db.ExecContext(ctx, query, request.UUID, id, "deposit", request.Sum)
+	_, err = tx.ExecContext(ctx, query, request.UUID, id, "deposit", request.Sum)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -243,8 +261,7 @@ func (pg *PG) Withdrawal(ctx context.Context, id int, request *FinRequest) error
 		metrics.MetricErrCount.WithLabelValues("Withdrawal").Inc()
 		return fmt.Errorf("err withdrawing the Wallet: %w", err)
 	}
-	err = tx.Commit()
-	if err != nil {
+	if err = tx.Commit(); err != nil {
 		metrics.MetricErrCount.WithLabelValues("Withdrawal").Inc()
 		return fmt.Errorf("err committing the transaction: %w", err)
 	}
@@ -269,7 +286,7 @@ func (pg *PG) Transfer(ctx context.Context, id int, request *FinRequest) error {
 	}()
 
 	query := `INSERT INTO transaction (uuid,from_id,to_id,operation,sum) VALUES ($1,$2,$3,$4,$5)`
-	_, err = pg.db.ExecContext(ctx, query, request.UUID, id, request.WalletTarget, "transfer", request.Sum)
+	_, err = tx.ExecContext(ctx, query, request.UUID, id, request.WalletTarget, "transfer", request.Sum)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -347,15 +364,33 @@ func (pg *PG) CheckBalance(ctx context.Context, id int) (float64, error) {
 	return balance, nil
 }
 
-func (pg *PG) GetTransactions(ctx context.Context, id int, order string) ([]Transaction, error) {
+func (pg *PG) GetTransactions(ctx context.Context, id int, params *models.TransactionQueryParams) ([]Transaction, error) {
 	var ans []Transaction
-	var query string
-	if order == "" {
-		query = `SELECT id,from_id,to_id,operation,sum,date FROM transaction WHERE from_id=$1 ORDER BY date DESC`
+	query := `
+SELECT id,
+       from_id,
+       to_id,
+       operation,
+       sum,
+       date 
+FROM transaction
+WHERE from_id=$1 OR to_id=$1 `
+	if params != nil {
+		switch params.Sort{
+			...
+		}
+		if params.Limit != 0 {
+			query += " LIMIT " + strconv.Itoa(params.Limit)
+		} else {
+			query += " LIMIT 100"
+		}
+		if params.Offset != 0 {
+			query += " OFFSET " + strconv.Itoa(params.Offset)
+		}
 	} else {
-		query = `SELECT id,from_id,to_id,operation,sum,date FROM transaction WHERE from_id=$1 ORDER BY sum DESC`
+		query += "ORDER BY date DESC"
 	}
-	_, err := pg.GetWallet(ctx, id, "")
+	_, err := pg.GetWallet(ctx, id)
 	if errors.Is(err, ErrWalletNotFound) {
 		return nil, ErrWalletNotFound
 	}

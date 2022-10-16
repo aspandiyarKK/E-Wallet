@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"EWallet/pkg/models"
 	"context"
 	"fmt"
 
@@ -10,14 +11,14 @@ import (
 )
 
 type Storage interface {
-	GetWallet(ctx context.Context, id int, currency string) (repository.Wallet, error)
+	GetWallet(ctx context.Context, id int) (repository.Wallet, error)
 	UpdateWallet(ctx context.Context, id int, wallet repository.Wallet) (repository.Wallet, error)
 	DeleteWallet(ctx context.Context, id int) error
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
 	Deposit(ctx context.Context, id int, request *repository.FinRequest) error
 	Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error
 	Transfer(ctx context.Context, id int, request *repository.FinRequest) error
-	GetTransactions(ctx context.Context, id int, order string) ([]repository.Transaction, error)
+	GetTransactions(ctx context.Context, id int, params *models.TransactionQueryParams) ([]repository.Transaction, error)
 }
 type Exchange interface {
 	GetRate(ctx context.Context, currency string, amount float64) (float64, error)
@@ -46,7 +47,7 @@ func (s *App) CreateWallet(ctx context.Context, wallet repository.Wallet) (int, 
 }
 
 func (s *App) GetWallet(ctx context.Context, id int, currency string) (repository.Wallet, error) {
-	wal, err := s.store.GetWallet(ctx, id, currency)
+	wal, err := s.store.GetWallet(ctx, id)
 	if err != nil {
 		return repository.Wallet{}, fmt.Errorf("err getting wallet : %w", err)
 	}
@@ -57,6 +58,10 @@ func (s *App) GetWallet(ctx context.Context, id int, currency string) (repositor
 		}
 	}
 	return wal, nil
+}
+
+func (s *App) GetRate(ctx context.Context, currency string) (float64, error) {
+	return s.exchange.GetRate(ctx, currency, 1)
 }
 
 func (s *App) DeleteWallet(ctx context.Context, id int) error {
@@ -98,8 +103,8 @@ func (s *App) Transfer(ctx context.Context, id int, request *repository.FinReque
 	return nil
 }
 
-func (s *App) GetTransactions(ctx context.Context, id int, order string) ([]repository.Transaction, error) {
-	trans, err := s.store.GetTransactions(ctx, id, order)
+func (s *App) GetTransactions(ctx context.Context, id int, params *models.TransactionQueryParams) ([]repository.Transaction, error) {
+	trans, err := s.store.GetTransactions(ctx, id, params)
 	if err != nil {
 		return nil, fmt.Errorf("err getting the transactions: %w", err)
 	}

@@ -45,9 +45,11 @@ func main() {
 	exch := exchange.NewExchangeRate(log, xrHost, apiKey)
 	app := internal.NewApp(log, pg, exch)
 	r := rest.NewRouter(log, app, secret)
-	if err = r.Run(ctx, addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Panicf("Error starting server: %v", err)
-	}
+	go func() {
+		if err = r.Run(ctx, addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Panicf("Error starting server: %v", err)
+		}
+	}()
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGHUP, syscall.SIGQUIT)
 	<-sigCh

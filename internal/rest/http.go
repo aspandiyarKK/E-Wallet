@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"EWallet/pkg/models"
 	"context"
 	"errors"
 	"net/http"
@@ -23,13 +24,14 @@ type Router struct {
 
 type App interface {
 	GetWallet(ctx context.Context, id int, currency string) (repository.Wallet, error)
+	GetRate(ctx context.Context, currency string) (float64, error)
 	UpdateWallet(ctx context.Context, id int, wallet repository.Wallet) (repository.Wallet, error)
 	DeleteWallet(ctx context.Context, id int) error
 	CreateWallet(ctx context.Context, wallet repository.Wallet) (int, error)
 	Deposit(ctx context.Context, id int, request *repository.FinRequest) error
 	Withdrawal(ctx context.Context, id int, request *repository.FinRequest) error
 	Transfer(ctx context.Context, id int, request *repository.FinRequest) error
-	GetTransactions(ctx context.Context, id int, order string) ([]repository.Transaction, error)
+	GetTransactions(ctx context.Context, id int, params *models.TransactionQueryParams) ([]repository.Transaction, error)
 }
 
 func NewRouter(log *logrus.Logger, app App, secret string) *Router {
@@ -43,7 +45,7 @@ func NewRouter(log *logrus.Logger, app App, secret string) *Router {
 	r.router.POST("/auth", r.authHandler)
 	g := r.router.Group("/api/v1").Use(r.jwtAuth())
 	g.GET("/wallet/:id", r.getWallet)
-	g.GET("/transaction/:id", r.transaction)
+	g.GET("/wallet/:id/transactions", r.transaction)
 	g.POST("/wallet", r.addWallet)
 	g.DELETE("/wallet/:id", r.deleteWallet)
 	g.PUT("/wallet/:id", r.updateWallet)
@@ -259,13 +261,16 @@ func (r *Router) transfer(c *gin.Context) {
 
 func (r *Router) transaction(c *gin.Context) {
 	val := c.Param("id")
-	order := c.Query("order")
 	id, err := strconv.Atoi(val)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
-	trans, err := r.app.GetTransactions(c, id, order)
+	params := models.TransactionQueryParams{}
+	if err = getRequestParams(c, &params); err != nil {
+		return
+	}
+	trans, err := r.app.GetTransactions(c, id, &params)
 	switch {
 	case err == nil:
 	case errors.Is(err, repository.ErrWalletNotFound):
@@ -277,4 +282,23 @@ func (r *Router) transaction(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, trans)
+}
+
+func getRequestParams(c *gin.Context, params *models.TransactionQueryParams) error {
+	params.Sort = c.Query("sort")
+	var err error
+	val := c.Param("limit")
+	params.Limit, err = strconv.Atoi(val)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, err)
+		return err
+	}
+	val = c.Param("offset")
+	params.Offset, err = strconv.Atoi(val)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, err)
+		return err
+	}
+	// descending
+	return nil
 }

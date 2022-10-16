@@ -1,12 +1,14 @@
 package exchange
 
 import (
+	"EWallet/pkg/metrics"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -46,11 +48,15 @@ func NewExchangeRate(log *logrus.Logger, xrHost string, apiKey string) *Rate {
 }
 
 func (e *Rate) GetRate(ctx context.Context, currency string, amount float64) (float64, error) {
+	started := time.Now()
+	defer func() {
+		metrics.MetricHTTPRequestDuration.Observe(time.Since(started).Seconds())
+	}()
 	amountStr := fmt.Sprintf("%v", amount)
 	url := e.xrHost + currency + "&from=rub&amount=" + amountStr
 	fmt.Println(url)
 	client := &http.Client{}
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	req.Header.Set("apikey", e.apiKey)
 	if err != nil {
 		fmt.Println(err)
@@ -68,6 +74,7 @@ func (e *Rate) GetRate(ctx context.Context, currency string, amount float64) (fl
 	case http.StatusNotFound:
 		return 0, fmt.Errorf("%s: %w", currency, ErrCurrencyNotFound)
 	default:
+		metrics.MetricErrCount.WithLabelValues("GetRate").Inc()
 		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			return 0, fmt.Errorf("err handling another error (unexpected status code: %d),fail to read response body: %w", res.StatusCode, err)
