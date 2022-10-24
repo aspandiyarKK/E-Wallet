@@ -376,8 +376,17 @@ SELECT id,
 FROM transaction
 WHERE from_id=$1 OR to_id=$1 `
 	if params != nil {
-		switch params.Sort{
-			...
+		switch params.Sort {
+		case "sum":
+			query += " ORDER BY SUM"
+		default:
+			query += " ORDER BY DATE"
+		}
+		switch params.Desc {
+		case false:
+			query += " ASC"
+		default:
+			query += " DESC"
 		}
 		if params.Limit != 0 {
 			query += " LIMIT " + strconv.Itoa(params.Limit)

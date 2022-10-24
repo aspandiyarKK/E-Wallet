@@ -13,6 +13,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	_ "EWallet/cmd/ewallet/docs"
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
 )
 
 type Router struct {
@@ -42,6 +46,7 @@ func NewRouter(log *logrus.Logger, app App, secret string) *Router {
 		secret: []byte(secret),
 	}
 	r.router.GET("/metrics", prometheusHandler())
+	r.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.router.POST("/auth", r.authHandler)
 	g := r.router.Group("/api/v1").Use(r.jwtAuth())
 	g.GET("/wallet/:id", r.getWallet)
@@ -66,6 +71,18 @@ func (r *Router) Run(_ context.Context, addr string) error {
 	return r.router.Run(addr)
 }
 
+// ShowAccount godoc
+// @Summary      Show an account
+// @Description  get string by ID
+// @Tags         accounts
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Account ID"
+// @Success      200  {object}  model.Account
+// @Failure      400  {object}  httputil.HTTPError
+// @Failure      404  {object}  httputil.HTTPError
+// @Failure      500  {object}  httputil.HTTPError
+// @Router       /accounts/{id} [get]
 func (r *Router) addWallet(c *gin.Context) {
 	var input repository.Wallet
 	if err := c.BindJSON(&input); err != nil {
@@ -287,18 +304,23 @@ func (r *Router) transaction(c *gin.Context) {
 func getRequestParams(c *gin.Context, params *models.TransactionQueryParams) error {
 	params.Sort = c.Query("sort")
 	var err error
-	val := c.Param("limit")
+	val := c.Query("limit")
 	params.Limit, err = strconv.Atoi(val)
-	if err != nil {
+	if err != nil && val != "" {
 		c.JSON(http.StatusBadRequest, err)
 		return err
 	}
-	val = c.Param("offset")
+	val = c.Query("offset")
 	params.Offset, err = strconv.Atoi(val)
-	if err != nil {
+	if err != nil && val != "" {
 		c.JSON(http.StatusBadRequest, err)
 		return err
 	}
-	// descending
+	val = c.Query("desc")
+	params.Desc, err = strconv.ParseBool(val)
+	if err != nil && val != "" {
+		c.JSON(http.StatusBadRequest, err)
+		return err
+	}
 	return nil
 }
