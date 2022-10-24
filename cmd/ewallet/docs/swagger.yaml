@@ -1,0 +1,12 @@
+basePath: /api/v1
+host: localhost:3000
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a api server for E-wallet application.
+  title: E-wallet API
+  version: "1.0"
+paths: {}
+swagger: "2.0"
