@@ -1,9 +1,10 @@
 package internal
 
 import (
-	"EWallet/pkg/models"
 	"context"
 	"fmt"
+
+	"EWallet/pkg/models"
 
 	"EWallet/pkg/repository"
 

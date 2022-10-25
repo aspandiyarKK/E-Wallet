@@ -9,7 +9,8 @@ up:
 
 down:
 	docker-compose down
-
+run:
+	go run cmd/main.go
 test:up
 	go test -v ./...
 	make down

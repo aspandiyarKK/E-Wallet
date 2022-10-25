@@ -24,7 +24,7 @@ import (
 
 const (
 	pgDSN = "postgres://postgres:secret@localhost:5433/postgres"
-	token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjY4MzM2Mjg5LCJpc3MiOiJlLXdhbGxldCJ9.buETLo3ShqjvXT8Vg5GY2sMOmbLGNRqE3axwht5iN-Y"
+	token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA"
 )
 
 type IntegrationTestSuite struct {
@@ -333,7 +333,6 @@ func (s *IntegrationTestSuite) TestDepoWallet() {
 }
 
 func (s *IntegrationTestSuite) TestDepoWalletNotFound() {
-
 	ctx := context.Background()
 	path := s.url + "/wallet"
 	wallet := repository.Wallet{
@@ -343,7 +342,7 @@ func (s *IntegrationTestSuite) TestDepoWalletNotFound() {
 
 	finreq := repository.FinRequest{
 		Sum:  1000.0,
-		UUID: "f7eb5a3b-d9d2-11ec-abbd-0242ac150005",
+		UUID: "f7eb5a3b-d9d2-11ec-abbd-0242ac999735",
 	}
 	var idMap map[string]int
 	resp := s.processRequest(ctx, http.MethodPost, path, wallet, &idMap)
@@ -802,6 +801,7 @@ func (s *IntegrationTestSuite) TestGetTransaction() {
 	require.Equal(s.T(), ans[1].Sum, finreq2.Sum)
 	require.Equal(s.T(), ans[0].Sum, finreq.Sum)
 }
+
 func (s *IntegrationTestSuite) TestGetTransferTransaction() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
@@ -843,6 +843,7 @@ func (s *IntegrationTestSuite) TestGetTransferTransaction() {
 	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(idGetter)+"/transactions", nil, &ans)
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
 }
+
 func (s *IntegrationTestSuite) TestGetTransactionParams() {
 	ctx := context.Background()
 	path := s.url + "/wallet"
@@ -875,7 +876,7 @@ func (s *IntegrationTestSuite) TestGetTransactionParams() {
 	var ans []repository.Transaction
 	resp = s.processRequest(ctx, http.MethodGet, path+"/"+strconv.Itoa(id)+"/transactions?limit=1", nil, &ans)
 	require.Equal(s.T(), http.StatusOK, resp.StatusCode)
-	//require.Equal(s.T(), ans[0].Sum, finreq2.Sum)
+	// require.Equal(s.T(), ans[0].Sum, finreq2.Sum)
 	require.Equal(s.T(), len(ans), 1)
 }
 

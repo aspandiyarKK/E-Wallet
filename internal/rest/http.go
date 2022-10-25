@@ -1,11 +1,12 @@
 package rest
 
 import (
-	"EWallet/pkg/models"
 	"context"
 	"errors"
 	"net/http"
 	"strconv"
+
+	"EWallet/pkg/models"
 
 	"EWallet/pkg/repository"
 
@@ -13,8 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	_ "EWallet/cmd/ewallet/docs"
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
 )
@@ -71,18 +70,6 @@ func (r *Router) Run(_ context.Context, addr string) error {
 	return r.router.Run(addr)
 }
 
-// ShowAccount godoc
-// @Summary      Show an account
-// @Description  get string by ID
-// @Tags         accounts
-// @Accept       json
-// @Produce      json
-// @Param        id   path      int  true  "Account ID"
-// @Success      200  {object}  model.Account
-// @Failure      400  {object}  httputil.HTTPError
-// @Failure      404  {object}  httputil.HTTPError
-// @Failure      500  {object}  httputil.HTTPError
-// @Router       /accounts/{id} [get]
 func (r *Router) addWallet(c *gin.Context) {
 	var input repository.Wallet
 	if err := c.BindJSON(&input); err != nil {
@@ -138,7 +125,7 @@ func (r *Router) deleteWallet(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusNoContent, nil)
+	c.JSON(http.StatusNoContent, "Ok")
 }
 
 func (r *Router) updateWallet(c *gin.Context) {

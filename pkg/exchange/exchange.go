@@ -1,7 +1,6 @@
 package exchange
 
 import (
-	"EWallet/pkg/metrics"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"EWallet/pkg/metrics"
 
 	"github.com/sirupsen/logrus"
 )
@@ -53,7 +54,7 @@ func (e *Rate) GetRate(ctx context.Context, currency string, amount float64) (fl
 		metrics.MetricHTTPRequestDuration.Observe(time.Since(started).Seconds())
 	}()
 	amountStr := fmt.Sprintf("%v", amount)
-	url := e.xrHost + currency + "&from=rub&amount=" + amountStr
+	url := e.xrHost + currency + "&from=kzt&amount=" + amountStr
 	fmt.Println(url)
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

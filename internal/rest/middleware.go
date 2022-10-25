@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	TokenExpireDuration = time.Hour * 1000
+	TokenExpireDuration = time.Hour * 1000000
 	sessionKey          = "session"
 	uuidKey             = "UUID"
 )

@@ -30,17 +30,6 @@ var (
 	secret = os.Getenv("SECRET_JWT")
 )
 
-// @title         E-wallet API
-// @version         1.0
-// @description     This is a api server for E-wallet application.
-
-// @contact.name   API Support
-// @contact.url    http://www.swagger.io/support
-// @contact.email  support@swagger.io
-
-// @host      localhost:3000
-// @BasePath  /api/v1
-
 func main() {
 	log := logger.NewLogger()
 	ctx, cancel := context.WithCancel(context.Background())

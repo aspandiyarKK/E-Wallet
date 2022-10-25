@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"EWallet/pkg/models"
 	"context"
 	"database/sql"
 	"embed"
@@ -9,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"EWallet/pkg/models"
 
 	"EWallet/pkg/metrics"
 
@@ -193,10 +194,8 @@ func (pg *PG) Deposit(ctx context.Context, id int, request *FinRequest) error {
 		return fmt.Errorf("err starting transaction: %w", err)
 	}
 	defer func() {
-		if err != nil {
-			if err = tx.Rollback(); err != nil {
-				pg.log.Error("err rolling back transaction")
-			}
+		if err = tx.Rollback(); err != nil {
+			pg.log.Error("err rolling back transaction")
 		}
 	}()
 	query := `INSERT INTO transaction (uuid,from_id,operation,sum) VALUES ($1,$2,$3,$4)`
@@ -207,6 +206,7 @@ func (pg *PG) Deposit(ctx context.Context, id int, request *FinRequest) error {
 			return ErrDuplicateKey
 		}
 	}
+
 	query = `UPDATE wallet SET balance = balance + $1 WHERE id = $2`
 	res, err := tx.ExecContext(ctx, query, request.Sum, id)
 	cnt, _ := res.RowsAffected()
@@ -241,7 +241,7 @@ func (pg *PG) Withdrawal(ctx context.Context, id int, request *FinRequest) error
 		}
 	}()
 	query := `INSERT INTO transaction (uuid,from_id,operation,sum) VALUES ($1,$2,$3,$4)`
-	_, err = tx.ExecContext(ctx, query, request.UUID, id, "deposit", request.Sum)
+	_, err = tx.ExecContext(ctx, query, request.UUID, id, "withdraw", request.Sum)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgErr.Code == pgerrcode.UniqueViolation {
@@ -368,6 +368,7 @@ func (pg *PG) GetTransactions(ctx context.Context, id int, params *models.Transa
 	var ans []Transaction
 	query := `
 SELECT id,
+       uuid,
        from_id,
        to_id,
        operation,
