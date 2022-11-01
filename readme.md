@@ -3,7 +3,7 @@
 Для запуска сервиса
 
 ```shell
-make up
+make run
 ```
 
 Для запуска тестов
@@ -25,7 +25,7 @@ make lint
 ```bash
 # AddDWallet
 curl --location --request POST 'http://localhost:3000/api/v1/wallet' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjo1MjY3MzIyNTIwLCJpc3MiOiJlLXdhbGxldCJ9.HgoCpW5_4DocvL66GPRNU_tneE8lspCwUtRjhwFnHUY' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "owner":"Aspandiyar",
@@ -50,7 +50,7 @@ params:
 `?currency` - string(Examples:"USD","RUB","EUR",  ....), default:"RUB"
 
 curl --location --request GET 'http://localhost:3000/api/v1/wallet/1' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjo1MjY3MzIyNTIwLCJpc3MiOiJlLXdhbGxldCJ9.HgoCpW5_4DocvL66GPRNU_tneE8lspCwUtRjhwFnHUY' \
 --data-raw ''
 ```
 
@@ -69,7 +69,7 @@ curl --location --request GET 'http://localhost:3000/api/v1/wallet/1' \
 
 ```bash
 curl --location --request PUT 'http://localhost:3000/api/v1/wallet/1' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjo1MjY3MzIyNTIwLCJpc3MiOiJlLXdhbGxldCJ9.HgoCpW5_4DocvL66GPRNU_tneE8lspCwUtRjhwFnHUY' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "owner":"Aspandiyar_K",
@@ -92,7 +92,7 @@ curl --location --request PUT 'http://localhost:3000/api/v1/wallet/1' \
 
 ```bash
 curl --location --request PUT 'http://localhost:3000/api/v1/wallet/2/deposit' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjo1MjY3MzIyNTIwLCJpc3MiOiJlLXdhbGxldCJ9.HgoCpW5_4DocvL66GPRNU_tneE8lspCwUtRjhwFnHUY' \
 --header 'Content-Type: application/json' \
 --data-raw '{"sum":5000,"uuid":"f7eb5a3b-d9d2-11ec-abbd-0242ac150004"}'
 ```
@@ -109,7 +109,7 @@ curl --location --request PUT 'http://localhost:3000/api/v1/wallet/2/deposit' \
 
 ```bash
 curl --location --request PUT 'http://localhost:3000/api/v1/wallet/2/withdraw' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjo1MjY3MzIyNTIwLCJpc3MiOiJlLXdhbGxldCJ9.HgoCpW5_4DocvL66GPRNU_tneE8lspCwUtRjhwFnHUY' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "sum": 5000,
@@ -129,7 +129,7 @@ curl --location --request PUT 'http://localhost:3000/api/v1/wallet/2/withdraw' \
 
 ```bash
 curl --location --request PUT 'http://localhost:3000/api/v1/wallet/1/transfer' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjo1MjY3MzIyNTIwLCJpc3MiOiJlLXdhbGxldCJ9.HgoCpW5_4DocvL66GPRNU_tneE8lspCwUtRjhwFnHUY' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "sum": 200,
@@ -160,7 +160,7 @@ params:
 
 ```bash
 curl --location --request GET 'http://localhost:3000/api/v1/wallet/2/transactions?sort=sum&desc=false&limit=2' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjo1MjY3MzIyNTIwLCJpc3MiOiJlLXdhbGxldCJ9.HgoCpW5_4DocvL66GPRNU_tneE8lspCwUtRjhwFnHUY' \
 --data-raw ''
 ```
 
@@ -193,7 +193,7 @@ curl --location --request GET 'http://localhost:3000/api/v1/wallet/2/transaction
 
 ```bash
 curl --location --request DELETE 'http://localhost:3000/api/v1/wallet/1' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjo1MjY3MzIyNTIwLCJpc3MiOiJlLXdhbGxldCJ9.HgoCpW5_4DocvL66GPRNU_tneE8lspCwUtRjhwFnHUY' \
 --data-raw ''
 ```
 
