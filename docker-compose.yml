@@ -10,6 +10,23 @@ services:
       - "5433:5432"
     volumes:
       - postgres_volume:/var/lib/postgresql/data
+    networks:
+      - ewallet-network
+
+  service:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      environment:
+        PG_DSN: "postgres://postgres:secret@db:5432/postgres"
+      restart: always
+      ports:
+        - "3000:3000"
+      networks:
+        - ewallet-network
 
 volumes:
   postgres_volume:
+
+networks:
+  ewallet-network:

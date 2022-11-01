@@ -47,7 +47,7 @@ curl --location --request POST 'http://localhost:3000/api/v1/wallet' \
 # GetWallet для id = 1
 params:
 
-`?currency` - string(Examples:"USD","RUB","EUR",  ....), default:"KZT"
+`?currency` - string(Examples:"USD","RUB","EUR",  ....), default:"RUB"
 
 curl --location --request GET 'http://localhost:3000/api/v1/wallet/1' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFzcGFuIiwiZXhwIjoxNjcwMzA4Nzg4LCJpc3MiOiJlLXdhbGxldCJ9.2acWtWXecZ4L0hu2jAhUJnRcyPTlUjsDOWU_v7NeYPA' \

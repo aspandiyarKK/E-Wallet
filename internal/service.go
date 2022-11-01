@@ -33,7 +33,7 @@ type App struct {
 
 func NewApp(log *logrus.Logger, store Storage, exchange Exchange) *App {
 	return &App{
-		log:      log.WithField("component", "service"),
+		log:      log.WithField("component", "ewallet"),
 		store:    store,
 		exchange: exchange,
 	}

@@ -14,8 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/swaggo/files"
-	"github.com/swaggo/gin-swagger"
 )
 
 type Router struct {
@@ -45,7 +43,6 @@ func NewRouter(log *logrus.Logger, app App, secret string) *Router {
 		secret: []byte(secret),
 	}
 	r.router.GET("/metrics", prometheusHandler())
-	r.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.router.POST("/auth", r.authHandler)
 	g := r.router.Group("/api/v1").Use(r.jwtAuth())
 	g.GET("/wallet/:id", r.getWallet)

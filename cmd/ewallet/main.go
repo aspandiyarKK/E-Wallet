@@ -24,7 +24,7 @@ const port = 3000
 
 var (
 	pgDSN  = os.Getenv("PG_DSN")
-	addr   = fmt.Sprintf("localhost:%d", port)
+	addr   = fmt.Sprintf(":3000")
 	xrHost = os.Getenv("XR_HOST")
 	apiKey = os.Getenv("API_KEY")
 	secret = os.Getenv("SECRET_JWT")
